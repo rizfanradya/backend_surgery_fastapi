@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get('/list-master')
-def get_masterplan(
+def masterplan(
     limit: int = 10,
     offset: int = 0,
     order: Optional[Literal['asc', 'desc']] = 'asc',
@@ -46,7 +46,7 @@ def get_masterplan(
 
 
 @router.get('/constraints')
-def get_constraints(
+def constraints(
     limit: int = 10,
     offset: int = 0,
     session: Session = Depends(get_db),
@@ -197,3 +197,33 @@ def get_constraints(
         "limit": limit,
         "data": 'reformatted_data'
     }
+
+
+@router.post('/objectives')
+def objectives(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
+
+
+@router.post('/ins-constraints')
+def set_constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
+
+
+@router.post('/generate')
+def generate_masterplan(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
+
+
+@router.get('/otassignment')
+def otassignment(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
+
+
+@router.post('/validity')
+def check_excell_format(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
+
+
+@router.get('/template')
+def download_template(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return 'ok'
