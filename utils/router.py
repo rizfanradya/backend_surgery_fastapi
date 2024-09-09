@@ -26,6 +26,7 @@ import api.equipment_requirement_status as equipment_requirement_status
 import api.equipment as equipment
 import api.equipment_requirement as equipment_requirement
 import api.sub_specialties_clashing_groups as sub_specialties_clashing_groups
+import api.sub_specialties_ot_types as sub_specialties_ot_types
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -61,6 +62,11 @@ routers = [
     (
         sub_specialties_clashing_groups.router,
         "Sub Specialties Clashing Groups API",
+        "/api"
+    ),
+    (
+        sub_specialties_ot_types.router,
+        "Sub Specialties Ot Types API",
         "/api"
     ),
 ]
