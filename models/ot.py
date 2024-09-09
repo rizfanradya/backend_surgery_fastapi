@@ -10,4 +10,4 @@ class Ot(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(length=255), nullable=False)
     ot_type_id = Column(Integer, ForeignKey('ot_type.id'), nullable=False)
-    status_id = Column(Integer, nullable=False)
+    status_id = Column(Integer, ForeignKey('status.id'), nullable=False)

@@ -1,6 +1,7 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Boolean
+from sqlalchemy import ForeignKey
 
 
 class Unit(Base):
@@ -8,7 +9,11 @@ class Unit(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(length=255), nullable=False)
-    subspecialty_id = Column(Integer, nullable=False)
+    subspecialty_id = Column(
+        Integer,
+        ForeignKey('sub_specialty.id'),
+        nullable=False
+    )
     is_require_anaes = Column(Boolean, nullable=False)
     max_slot_limit = Column(Integer, nullable=False)
     no_of_slots = Column(Integer, nullable=False)
