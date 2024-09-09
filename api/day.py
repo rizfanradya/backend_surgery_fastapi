@@ -25,10 +25,10 @@ def create_day(day: DaySchema, session: Session = Depends(get_db), token: str = 
 
 @router.put('/day/{id}')
 def update_day(id: int, day: DaySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    data_info = session.query(Day).get(id)
+    if data_info is None:
+        send_error_response('Data not found')
     try:
-        data_info = session.query(Day).get(id)
-        if data_info is None:
-            send_error_response('Data not found')
         for key, value in day.dict().items():
             if value is not None:
                 setattr(data_info, key, value)

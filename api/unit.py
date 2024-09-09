@@ -25,10 +25,10 @@ def create_unit(unit: UnitSchema, session: Session = Depends(get_db), token: str
 
 @router.put('/unit/{id}')
 def update_unit(id: int, unit: UnitSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    data_info = session.query(Unit).get(id)
+    if data_info is None:
+        send_error_response('Data not found')
     try:
-        data_info = session.query(Unit).get(id)
-        if data_info is None:
-            send_error_response('Data not found')
         for key, value in unit.dict().items():
             if value is not None:
                 setattr(data_info, key, value)

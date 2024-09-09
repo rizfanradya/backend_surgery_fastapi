@@ -63,17 +63,8 @@ def constraints(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    # units = session.query(Unit).options(
-    #     joinedload(Unit.fixed_ots),
-    #     joinedload(Unit.blocked_ots),
-    #     joinedload(Unit.preferred_ots),
-    #     joinedload(Unit.blocked_days).joinedload(Unit.blocked_days.day),
-    #     joinedload(Unit.equipment_requirements),
-    #     joinedload(Unit.subspecialty).joinedload(
-    #         Unit.subspecialty.SubspecialtiesClashingGroups).joinedload(ClashingGroups),
-    #     joinedload(Unit.subspecialty).joinedload(
-    #         Unit.subspecialty.SubspecialtiesOtTypes).joinedload(OtType)
-    # ).order_by(Unit.id).offset(offset).limit(limit).all()
+    units = session.query(Unit).join().order_by(
+        Unit.id).offset(offset).limit(limit).all()
 
     # setobj = session.query(Objectives).order_by(Objectives.id).all()
     # all_ots = session.query(Ot).order_by(Ot.id).all()

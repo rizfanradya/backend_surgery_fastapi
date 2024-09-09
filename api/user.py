@@ -28,11 +28,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_db)):
 @router.put('/user/{id}')
 def update_user(id: int, user: UserSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     user.password = hashed_password(user.password)
+    user_info = session.query(User).get(id)
+    if user_info is None:
+        send_error_response('User not found')
     try:
-        user_info = session.query(User).get(id)
-        if user_info is None:
-            send_error_response('User not found')
-
         for key, value in user.dict().items():
             if value is not None:
                 setattr(user_info, key, value)

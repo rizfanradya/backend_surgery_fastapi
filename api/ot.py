@@ -25,10 +25,10 @@ def create_ot(ot: OtSchema, session: Session = Depends(get_db), token: str = Dep
 
 @router.put('/ot/{id}')
 def update_ot(id: int, ot: OtSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    data_info = session.query(Ot).get(id)
+    if data_info is None:
+        send_error_response('Data not found')
     try:
-        data_info = session.query(Ot).get(id)
-        if data_info is None:
-            send_error_response('Data not found')
         for key, value in ot.dict().items():
             if value is not None:
                 setattr(data_info, key, value)

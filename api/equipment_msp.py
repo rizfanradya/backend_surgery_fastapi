@@ -25,10 +25,10 @@ def create_equipment_msp(equipment_msp: EquipmentMspSchema, session: Session = D
 
 @router.put('/equipment_msp/{id}')
 def update_equipment_msp(id: int, equipment_msp: EquipmentMspSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    data_info = session.query(EquipmentMsp).get(id)
+    if data_info is None:
+        send_error_response('Data not found')
     try:
-        data_info = session.query(EquipmentMsp).get(id)
-        if data_info is None:
-            send_error_response('Data not found')
         for key, value in equipment_msp.dict().items():
             if value is not None:
                 setattr(data_info, key, value)
