@@ -8,31 +8,22 @@ import api.procedure_name as procedure_name
 import api.ot as ot
 import api.unit as unit
 import api.ot_assignment as ot_assignment
+import api.week as week
 
+routers = [
+    (auth.router, "Auth API", "/api"),
+    (user.router, "User API", "/api"),
+    (procedure_name.router, "Procedure Name API", "/api"),
+    (ot.router, "Ot API", "/api"),
+    (unit.router, "Unit API", "/api"),
+    (ot_assignment.router, "Ot Assignment API", "/api"),
+    (week.router, "Week API", "/api"),
+    (generate_masterplan.router, "Generate Master Plan API", "/api/masplan"),
+    (generate_daily_schedule.router, "Generate Daily Schedule API", "/api/schedule"),
+    (backup.router, "Backup API", "/api/backup"),
+]
+
+sorted_routers = sorted(routers, key=lambda x: x[1])
 router = APIRouter()
-
-router.include_router(auth.router, tags=["Auth API"], prefix="/api")
-router.include_router(user.router, tags=["User API"], prefix="/api")
-router.include_router(
-    procedure_name.router,
-    tags=["Procedure Name API"],
-    prefix="/api"
-)
-router.include_router(ot.router, tags=["Ot API"], prefix="/api")
-router.include_router(unit.router, tags=["Unit API"], prefix="/api")
-router.include_router(
-    ot_assignment.router,
-    tags=["Ot Assignment API"],
-    prefix="/api"
-)
-router.include_router(
-    generate_masterplan.router,
-    tags=["Generate Master Plan API"],
-    prefix="/api/masplan"
-)
-router.include_router(
-    generate_daily_schedule.router,
-    tags=["Generate Daily Schedule API"],
-    prefix="/api/schedule"
-)
-router.include_router(backup.router, tags=["Backup API"], prefix="/api/backup")
+for router_instance, tag, prefix in sorted_routers:
+    router.include_router(router_instance, tags=[tag], prefix=prefix)
