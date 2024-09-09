@@ -21,6 +21,7 @@ import api.equipment_msp as equipment_msp
 import api.fixed_ot as fixed_ot
 import api.blocked_ot as blocked_ot
 import api.preferred_ot as preferred_ot
+import api.blocked_day as blocked_day
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -45,6 +46,7 @@ routers = [
     (fixed_ot.router, "Fixed Ot API", "/api"),
     (blocked_ot.router, "Blocked Ot API", "/api"),
     (preferred_ot.router, "Preferred Ot API", "/api"),
+    (blocked_day.router, "Blocked Day API", "/api"),
 ]
 
 sorted_routers = sorted(routers, key=lambda x: x[1])
