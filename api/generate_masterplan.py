@@ -1,15 +1,19 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.to_camel_case import to_camel_case
+from utils.error_response import send_error_response
 from typing import Literal, Optional
 from models.masterplan import Masterplan
+from models.procedure_name import ProcedureName
+from models.ot import Ot
+from models.unit import Unit
 from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
-import openpyxl
+from openpyxl import load_workbook, Workbook
 
 router = APIRouter()
 
@@ -43,8 +47,6 @@ def masterplan(
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {
         "total": total,
-        "limit": limit,
-        "offset": offset,
         "data": query
     }
 
@@ -224,13 +226,64 @@ def otassignment(session: Session = Depends(get_db), token: str = Depends(TokenA
 
 
 @router.post('/validity')
-def check_excell_format(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def check_excell_format(file: UploadFile = File(...), session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
+        send_error_response('Wrong file type, only accept xlsx')
+    expected_headers = [
+        "BOOKING DATE", "OPERATION DATE", "MRN", "AGE", "GENDER CODE", "DIAGNOSIS", "COMMENT",
+        "ANAES TYPE", "ANAES ID", "TYPE OF OPERATION", "SUBSPECIALITY DESC", "SPECIALITY ID",
+        "OT LIST NAME", "PROCEDURE NAME", "DURATION", "BOOKED BY", "SURGEON"
+    ]
+    contents = file.file.read()
+    excel_data = BytesIO(contents)
+    workbook = load_workbook(excel_data)
+    sheet = workbook.active
+    actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
+    mismatched_headers = []
+    for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
+        if expected != actual:
+            mismatched_headers.append(
+                f"Column {idx}: Expected '{expected}', found '{actual}'"
+            )
+    if mismatched_headers:
+        return send_error_response(f"Mismatched columns: {', '.join(mismatched_headers)}")
+    procedure_names = {p.name for p in session.query(ProcedureName).all()}
+    ot_names = {o.name for o in session.query(Ot).all()}
+    unit_names = {u.name for u in session.query(Unit).all()}
+    errors = []
+    for row_idx, row in enumerate(
+        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
+        start=2
+    ):
+        procedure_name = str(row[13])
+        ot_list_name = str(row[12])
+        subspeciality_desc = str(row[10])
+        if procedure_name not in procedure_names:
+            errors.append({
+                'row': row_idx,
+                'column': 'PROCEDURE NAME',
+                'error': f"'{procedure_name}' not found in database."
+            })
+        if ot_list_name not in ot_names:
+            errors.append({
+                'row': row_idx,
+                'column': 'OT LIST NAME',
+                'error': f"'{ot_list_name}' not found in database."
+            })
+        if subspeciality_desc not in unit_names:
+            errors.append({
+                'row': row_idx,
+                'column': 'SUBSPECIALITY DESC',
+                'error': f"'{subspeciality_desc}' not found in database."
+            })
+    if errors:
+        return send_error_response(errors, 'Invalid data found in the excel file.')
+    return {'message': 'Excel file is valid with correct headers and data matching the database.'}
 
 
 @router.get('/template')
 def download_template(token: str = Depends(TokenAuthorization)):
-    workbook = openpyxl.Workbook()
+    workbook = Workbook()
     sheet = workbook.active
     sheet.title = "template"  # type: ignore
     headers = [

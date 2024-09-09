@@ -1,12 +1,11 @@
 from fastapi import HTTPException
-from typing import Optional
 
 
-def send_error_response(error: str, message: Optional[str] = None):
+def send_error_response(error, message=None):
     raise HTTPException(
         status_code=404,
         detail={
-            "message": message or error,
+            "message": message if message else error,
             "error": error,
         }
     )
