@@ -6,15 +6,17 @@ from utils.auth import TokenAuthorization
 from utils.to_camel_case import to_camel_case
 from utils.error_response import send_error_response
 from typing import Literal, Optional
-from models.masterplan import Masterplan
-from models.procedure_name import ProcedureName
-from models.ot import Ot
-from models.unit import Unit
 from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
-
+from models.masterplan import Masterplan
+from models.procedure_name import ProcedureName
+from models.ot_assignment import OtAssignment
+from models.ot import Ot
+from models.unit import Unit
+from models.week import Week
+from models.day import Day
 router = APIRouter()
 
 
@@ -221,8 +223,65 @@ def generate_masterplan(session: Session = Depends(get_db), token: str = Depends
 
 
 @router.get('/otassignment')
-def otassignment(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def otassignment(
+    mssp_id: int,
+    ot_id: Optional[int] = None,
+    unit_id: Optional[int] = None,
+    week_id: Optional[int] = None,
+    session: Session = Depends(get_db),
+    token: str = Depends(TokenAuthorization)
+):
+    masterplan = session.query(Masterplan).get(mssp_id)
+    if masterplan is None:
+        return send_error_response('Masterplan not found.')
+
+    ot_assignment = session.query(OtAssignment).join(
+        Day).join(Unit).where(OtAssignment.mssp_id == mssp_id)  # type: ignore
+
+    if ot_id:
+        ot_assignment = ot_assignment.where(
+            OtAssignment.ot_id == ot_id)
+    if unit_id:
+        ot_assignment = ot_assignment.where(
+            OtAssignment.unit_id == unit_id)
+    if week_id:
+        ot_assignment = ot_assignment.where(
+            OtAssignment.week_id == week_id)
+
+    ot_assignment = ot_assignment.all()
+    ot_assignments_map = {}
+
+    for assignment in ot_assignment:
+        ot_id = assignment.ot_id
+        day_name = assignment.day.name.lower()
+        if ot_id not in ot_assignments_map:
+            ot_assignments_map[ot_id] = {}
+        ot_assignments_map[ot_id][day_name] = {
+            "unit_name": assignment.unit.name,
+            "is_require_anaes": assignment.is_require_anaes,
+            "time": f"{assignment.opening_time} - {assignment.closing_time}",
+            "color_hex": assignment.unit.color_hex
+        }
+
+    all_ot_ids = session.query(Ot.id).all()
+    all_ot_ids = [ot_id[0] for ot_id in all_ot_ids]
+
+    grouped_data = []
+    for ot_id in all_ot_ids:
+        week_data = ot_assignments_map.get(ot_id, {})
+        grouped_data.append({
+            "ot_id": ot_id,
+            "week": week_data
+        })
+
+    grouped_data.sort(key=lambda x: x["ot_id"])
+    weeks = session.query(Week).all()
+
+    return {
+        "otassignment": grouped_data,
+        "masterPlan": masterplan,
+        "weeks": weeks
+    }
 
 
 @router.post('/validity')

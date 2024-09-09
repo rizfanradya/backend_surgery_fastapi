@@ -11,6 +11,8 @@ from models.ot import *
 from models.unit import *
 from models.ot_assignment import *
 from models.week import *
+from models.day import *
+from models.ot_type import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
