@@ -13,24 +13,30 @@ router = APIRouter()
 
 @router.post('/sub_specialty')
 def create_sub_specialty(sub_specialty: SubSpecialtySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = SubSpecialty(**sub_specialty.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = SubSpecialty(**sub_specialty.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'specialty id not found')
 
 
 @router.put('/sub_specialty/{id}')
 def update_sub_specialty(id: int, sub_specialty: SubSpecialtySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(SubSpecialty).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in sub_specialty.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(SubSpecialty).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in sub_specialty.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'specialty id not found')
 
 
 @router.get('/sub_specialty', response_model=GetSubSpecialtyResponseSchema)

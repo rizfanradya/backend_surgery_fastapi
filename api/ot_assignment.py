@@ -13,24 +13,36 @@ router = APIRouter()
 
 @router.post('/ot_assignment')
 def create_ot_assignment(ot_assignment: OtAssignmentSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = OtAssignment(**ot_assignment.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = OtAssignment(**ot_assignment.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(
+            str(error),
+            'week id or masterplan id or ot id or unit id or day id not found'
+        )
 
 
 @router.put('/ot_assignment/{id}')
 def update_ot_assignment(id: int, ot_assignment: OtAssignmentSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(OtAssignment).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in ot_assignment.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(OtAssignment).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in ot_assignment.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(
+            str(error),
+            'week id or masterplan id or ot id or unit id or day id not found'
+        )
 
 
 @router.get('/ot_assignment', response_model=GetOtAssignmentResponseSchema)

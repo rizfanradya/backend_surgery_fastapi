@@ -13,24 +13,30 @@ router = APIRouter()
 
 @router.post('/procedure_name')
 def create_procedure_name(procedure_name: ProcedureNameSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = ProcedureName(**procedure_name.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = ProcedureName(**procedure_name.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'subspecialty id not found')
 
 
 @router.put('/procedure_name/{id}')
 def update_procedure_name(id: int, procedure_name: ProcedureNameSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(ProcedureName).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in procedure_name.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(ProcedureName).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in procedure_name.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'subspecialty id not found')
 
 
 @router.get('/procedure_name', response_model=GetProcedureNameResponseSchema)

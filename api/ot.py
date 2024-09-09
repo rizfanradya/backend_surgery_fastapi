@@ -13,24 +13,30 @@ router = APIRouter()
 
 @router.post('/ot')
 def create_ot(ot: OtSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = Ot(**ot.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = Ot(**ot.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'ot type id or status id not found')
 
 
 @router.put('/ot/{id}')
 def update_ot(id: int, ot: OtSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(Ot).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in ot.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(Ot).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in ot.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'ot type id or status id not found')
 
 
 @router.get('/ot', response_model=GetOtResponseSchema)

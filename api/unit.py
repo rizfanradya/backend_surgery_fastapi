@@ -13,24 +13,30 @@ router = APIRouter()
 
 @router.post('/unit')
 def create_unit(unit: UnitSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = Unit(**unit.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = Unit(**unit.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'subspecialty id not found')
 
 
 @router.put('/unit/{id}')
 def update_unit(id: int, unit: UnitSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(Unit).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in unit.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(Unit).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in unit.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'subspecialty id not found')
 
 
 @router.get('/unit', response_model=GetUnitResponseSchema)

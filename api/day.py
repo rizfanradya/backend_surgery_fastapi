@@ -13,24 +13,30 @@ router = APIRouter()
 
 @router.post('/day')
 def create_day(day: DaySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = Day(**day.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = Day(**day.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'week id not found')
 
 
 @router.put('/day/{id}')
 def update_day(id: int, day: DaySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data_info = session.query(Day).get(id)
-    if data_info is None:
-        send_error_response('Data not found')
-    for key, value in day.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        data_info = session.query(Day).get(id)
+        if data_info is None:
+            send_error_response('Data not found')
+        for key, value in day.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'week id not found')
 
 
 @router.get('/day', response_model=GetDayResponseSchema)
