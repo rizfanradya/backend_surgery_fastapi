@@ -19,6 +19,8 @@ import api.objectives as objectives
 import api.clashing_groups as clashing_groups
 import api.equipment_msp as equipment_msp
 import api.fixed_ot as fixed_ot
+import api.blocked_ot as blocked_ot
+import api.preferred_ot as preferred_ot
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -41,6 +43,8 @@ routers = [
     (clashing_groups.router, "Clashing Groups API", "/api"),
     (equipment_msp.router, "Equipment Msp API", "/api"),
     (fixed_ot.router, "Fixed Ot API", "/api"),
+    (blocked_ot.router, "Blocked Ot API", "/api"),
+    (preferred_ot.router, "Preferred Ot API", "/api"),
 ]
 
 sorted_routers = sorted(routers, key=lambda x: x[1])
