@@ -1,14 +1,18 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
-from sqlalchemy.types import String, Integer
+from sqlalchemy.types import Integer
 from sqlalchemy import ForeignKey
 
 
-class ProcedureName(Base):
-    __tablename__ = "procedure_name"
+class SubSpecialtiesClashingGroups(Base):
+    __tablename__ = "sub_specialties_clashing_groups"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(length=255), nullable=False)
+    clashing_group_id = Column(
+        Integer,
+        ForeignKey('clashing_groups.id'),
+        nullable=False
+    )
     sub_specialty_id = Column(
         Integer,
         ForeignKey('sub_specialty.id'),

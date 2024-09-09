@@ -25,6 +25,7 @@ import api.blocked_day as blocked_day
 import api.equipment_requirement_status as equipment_requirement_status
 import api.equipment as equipment
 import api.equipment_requirement as equipment_requirement
+import api.sub_specialties_clashing_groups as sub_specialties_clashing_groups
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -55,6 +56,11 @@ routers = [
     (
         equipment_requirement_status.router,
         "Equipment Requirement Status API",
+        "/api"
+    ),
+    (
+        sub_specialties_clashing_groups.router,
+        "Sub Specialties Clashing Groups API",
         "/api"
     ),
 ]

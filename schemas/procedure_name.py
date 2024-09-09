@@ -4,7 +4,7 @@ from typing import List
 
 class ProcedureNameSchema(BaseModel):
     name: str
-    subspecialty_id: int
+    sub_specialty_id: int
 
 
 class ProcedureNameDataSchema(ProcedureNameSchema):

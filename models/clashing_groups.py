@@ -1,7 +1,6 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer
-from sqlalchemy import ForeignKey
 
 
 class ClashingGroups(Base):
