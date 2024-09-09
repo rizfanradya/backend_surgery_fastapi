@@ -7,6 +7,7 @@ import api.backup as backup
 import api.procedure_name as procedure_name
 import api.ot as ot
 import api.unit as unit
+import api.ot_assignment as ot_assignment
 
 router = APIRouter()
 
@@ -19,6 +20,11 @@ router.include_router(
 )
 router.include_router(ot.router, tags=["Ot API"], prefix="/api")
 router.include_router(unit.router, tags=["Unit API"], prefix="/api")
+router.include_router(
+    ot_assignment.router,
+    tags=["Ot Assignment API"],
+    prefix="/api"
+)
 router.include_router(
     generate_masterplan.router,
     tags=["Generate Master Plan API"],
