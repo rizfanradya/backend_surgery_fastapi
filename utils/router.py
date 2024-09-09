@@ -6,6 +6,8 @@ import api.generate_daily_schedule as generate_daily_schedule
 import api.backup as backup
 import api.procedure_name as procedure_name
 import api.ot as ot
+import api.unit as unit
+
 router = APIRouter()
 
 router.include_router(auth.router, tags=["Auth API"], prefix="/api")
@@ -16,6 +18,7 @@ router.include_router(
     prefix="/api"
 )
 router.include_router(ot.router, tags=["Ot API"], prefix="/api")
+router.include_router(unit.router, tags=["Unit API"], prefix="/api")
 router.include_router(
     generate_masterplan.router,
     tags=["Generate Master Plan API"],

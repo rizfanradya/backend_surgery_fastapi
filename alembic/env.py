@@ -8,6 +8,7 @@ from models.user import *
 from models.masterplan import *
 from models.procedure_name import *
 from models.ot import *
+from models.unit import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
