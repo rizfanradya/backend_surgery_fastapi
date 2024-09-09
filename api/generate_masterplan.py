@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session, joinedload
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.to_camel_case import to_camel_case
 from typing import Literal, Optional
 from models.masterplan import Masterplan
 from sqlalchemy import asc, desc
+from io import BytesIO
+from datetime import datetime
+import openpyxl
 
 router = APIRouter()
 
@@ -225,5 +229,23 @@ def check_excell_format(session: Session = Depends(get_db), token: str = Depends
 
 
 @router.get('/template')
-def download_template(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def download_template(token: str = Depends(TokenAuthorization)):
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "template"  # type: ignore
+    headers = [
+        "BOOKING DATE", "OPERATION DATE", "MRN", "AGE", "GENDER CODE", "DIAGNOSIS", "COMMENT",
+        "ANAES TYPE", "ANAES ID", "TYPE OF OPERATION", "SUBSPECIALITY DESC", "SPECIALITY ID",
+        "OT LIST NAME", "PROCEDURE NAME", "DURATION", "BOOKED BY", "SURGEON"
+    ]
+    for col_num, header in enumerate(headers, 1):
+        sheet.cell(row=1, column=col_num, value=header)  # type: ignore
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    filename = datetime.now().strftime(f'masterplan_format_%Y-%B-%d_%H:%M:%S.xlsx')
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
