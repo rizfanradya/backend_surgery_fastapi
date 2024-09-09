@@ -17,6 +17,9 @@ from models.ot import Ot
 from models.unit import Unit
 from models.week import Week
 from models.day import Day
+from models.objectives import Objectives
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema
+
 router = APIRouter()
 
 
@@ -208,8 +211,17 @@ def constraints(
 
 
 @router.post('/objectives')
-def objectives(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    for update in objectives_weights.UpdatesObj:
+        data = session.query(Objectives).get(update.id)
+        if data is not None:
+            data.weight = update.weight
+        session.commit()
+        session.refresh(data)
+    return {
+        "success": True,
+        "updatedCount": objectives_weights
+    }
 
 
 @router.post('/ins-constraints')

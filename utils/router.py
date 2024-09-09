@@ -15,7 +15,7 @@ import api.status as status
 import api.masterplan as masterplan
 import api.sub_specialty as sub_specialty
 import api.specialty as specialty
-
+import api.objectives as objectives
 routers = [
     (auth.router, "Auth API", "/api"),
     (user.router, "User API", "/api"),
@@ -33,6 +33,7 @@ routers = [
     (masterplan.router, "Master Plan API", "/api"),
     (sub_specialty.router, "Sub Specialty API", "/api"),
     (specialty.router, "Specialty API", "/api"),
+    (objectives.router, "Objectives API", "/api")
 ]
 
 sorted_routers = sorted(routers, key=lambda x: x[1])

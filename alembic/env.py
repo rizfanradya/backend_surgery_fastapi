@@ -16,6 +16,7 @@ from models.ot_type import *
 from models.status import *
 from models.sub_specialty import *
 from models.specialty import *
+from models.objectives import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
