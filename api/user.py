@@ -1,4 +1,3 @@
-from fastapi.security import OAuth2PasswordBearer
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from utils.database import get_db
@@ -6,7 +5,7 @@ from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.hashed_password import hashed_password
 from models.user import User
-from schemas.user import UserSchema
+from schemas.user import UserSchema, GetUserResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -44,9 +43,12 @@ def update_user(id: int, user: UserSchema, session: Session = Depends(get_db), t
         send_error_response(str(error), 'User already exists')
 
 
-@router.get('/user')
-def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+@router.get('/user', response_model=GetUserResponseSchema)
+def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, user_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(User)
+
+    if user_id:
+        query = query.where(User.id == user_id)
 
     if search:
         query = query.filter(or_(*[getattr(User, column).ilike(
@@ -58,16 +60,8 @@ def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, ses
 
     return {
         "total_data": total_data,
-        "limit": limit,
-        "offset": offset,
-        "search": search,
         "data": query
     }
-
-
-@router.get('/user/{id}')
-def get_user_by_id(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return session.query(User).get(id)
 
 
 @router.delete('/user/{id}')

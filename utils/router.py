@@ -4,10 +4,17 @@ import api.auth as auth
 import api.generate_masterplan as generate_masterplan
 import api.generate_daily_schedule as generate_daily_schedule
 import api.backup as backup
+import api.procedure_name as procedure_name
+
 router = APIRouter()
 
 router.include_router(auth.router, tags=["Auth API"], prefix="/api")
 router.include_router(user.router, tags=["User API"], prefix="/api")
+router.include_router(
+    procedure_name.router,
+    tags=["Procedure Name API"],
+    prefix="/api"
+)
 router.include_router(
     generate_masterplan.router,
     tags=["Generate Master Plan API"],
