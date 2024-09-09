@@ -24,7 +24,7 @@ def create_masterplan(masterplan: MasterPlanSchema, session: Session = Depends(g
 def update_masterplan(id: int, masterplan: MasterPlanSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(Masterplan).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in masterplan.dict().items():
         if value is not None:
             setattr(data_info, key, value)

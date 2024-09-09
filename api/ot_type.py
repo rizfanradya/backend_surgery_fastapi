@@ -24,7 +24,7 @@ def create_ot_type(ot_type: OtTypeSchema, session: Session = Depends(get_db), to
 def update_ot_type(id: int, ot_type: OtTypeSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(OtType).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in ot_type.dict().items():
         if value is not None:
             setattr(data_info, key, value)

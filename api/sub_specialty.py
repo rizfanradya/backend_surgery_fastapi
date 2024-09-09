@@ -24,7 +24,7 @@ def create_sub_specialty(sub_specialty: SubSpecialtySchema, session: Session = D
 def update_sub_specialty(id: int, sub_specialty: SubSpecialtySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(SubSpecialty).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in sub_specialty.dict().items():
         if value is not None:
             setattr(data_info, key, value)

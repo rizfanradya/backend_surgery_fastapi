@@ -24,7 +24,7 @@ def create_procedure_name(procedure_name: ProcedureNameSchema, session: Session 
 def update_procedure_name(id: int, procedure_name: ProcedureNameSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(ProcedureName).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in procedure_name.dict().items():
         if value is not None:
             setattr(data_info, key, value)

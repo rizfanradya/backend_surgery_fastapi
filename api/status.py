@@ -24,7 +24,7 @@ def create_status(status: StatusSchema, session: Session = Depends(get_db), toke
 def update_status(id: int, status: StatusSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(Status).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in status.dict().items():
         if value is not None:
             setattr(data_info, key, value)

@@ -24,7 +24,7 @@ def create_ot_assignment(ot_assignment: OtAssignmentSchema, session: Session = D
 def update_ot_assignment(id: int, ot_assignment: OtAssignmentSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(OtAssignment).get(id)
     if data_info is None:
-        send_error_response('Ot Assignment Name not found')
+        send_error_response('Data not found')
     for key, value in ot_assignment.dict().items():
         if value is not None:
             setattr(data_info, key, value)

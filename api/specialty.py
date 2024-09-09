@@ -24,7 +24,7 @@ def create_specialty(specialty: SpecialtySchema, session: Session = Depends(get_
 def update_specialty(id: int, specialty: SpecialtySchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data_info = session.query(Specialty).get(id)
     if data_info is None:
-        send_error_response('Procedure Name not found')
+        send_error_response('Data not found')
     for key, value in specialty.dict().items():
         if value is not None:
             setattr(data_info, key, value)
