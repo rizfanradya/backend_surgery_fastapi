@@ -25,6 +25,7 @@ from models.preferred_ot import *
 from models.blocked_day import *
 from models.equipment_requirement_status import *
 from models.equipment import *
+from models.equipment_requirement import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
