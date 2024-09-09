@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.to_camel_case import to_camel_case
@@ -19,16 +19,6 @@ from models.unit import Unit
 from models.week import Week
 from models.day import Day
 from models.objectives import Objectives
-from models.fixed_ot import FixedOt
-from models.blocked_ot import BlockedOt
-from models.preferred_ot import PreferredOt
-from models.equipment_requirement import EquipmentRequirement
-from models.blocked_day import BlockedDay
-from models.sub_specialty import SubSpecialty
-from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
-from models.clashing_groups import ClashingGroups
-from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
-from models.ot_type import OtType
 
 router = APIRouter()
 
@@ -68,32 +58,30 @@ def masterplan(
 
 @router.get('/constraints')
 def constraints(
-    limit: int = 10,
-    offset: int = 0,
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    try:
-        units = (
-            session.query(Unit)
-            .outerjoin(FixedOt)
-            .outerjoin(BlockedOt)
-            .outerjoin(PreferredOt)
-            .outerjoin(BlockedDay)
-            .outerjoin(EquipmentRequirement)
-            .outerjoin(SubSpecialty)
-            .outerjoin(SubSpecialtiesClashingGroups)
-            .outerjoin(Unit.sub_specialty)
-            .outerjoin(SubSpecialtiesOtTypes)
-            .order_by(Unit.id)
-            .offset(offset)
-            .limit(limit)
-            .all()
+    objectives = session.query(Objectives).order_by(
+        Objectives.id).all()  # type: ignore
+    units = (
+        session.query(Unit)
+        .options(
+            joinedload(Unit.fixed_ot),
+            joinedload(Unit.blocked_ot),
+            joinedload(Unit.preferred_ot),
+            joinedload(Unit.blocked_day),
+            joinedload(Unit.equipment_requirement),
         )
+        .order_by(Unit.id)  # type: ignore
+        .all()
+    )
 
-        return units
-    except Exception as error:
-        send_error_response(str(error))
+    return {
+        'data': {
+            'constraints': units,
+            'objective': objectives
+        }
+    }
 
     # setobj = session.query(Objectives).order_by(Objectives.id).all()
     # all_ots = session.query(Ot).order_by(Ot.id).all()
