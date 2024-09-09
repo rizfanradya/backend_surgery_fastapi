@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import or_
 from models.clashing_groups import ClashingGroups
 from schemas.clashing_groups import ClashingGroupsSchema, GetClashingGroupsResponseSchema
+
 router = APIRouter()
 
 
