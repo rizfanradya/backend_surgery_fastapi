@@ -16,6 +16,9 @@ import api.masterplan as masterplan
 import api.sub_specialty as sub_specialty
 import api.specialty as specialty
 import api.objectives as objectives
+import api.clashing_groups as clashing_groups
+import api.equipment_msp as equipment_msp
+
 routers = [
     (auth.router, "Auth API", "/api"),
     (user.router, "User API", "/api"),
@@ -33,7 +36,9 @@ routers = [
     (masterplan.router, "Master Plan API", "/api"),
     (sub_specialty.router, "Sub Specialty API", "/api"),
     (specialty.router, "Specialty API", "/api"),
-    (objectives.router, "Objectives API", "/api")
+    (objectives.router, "Objectives API", "/api"),
+    (clashing_groups.router, "Clashing Groups API", "/api"),
+    (equipment_msp.router, "Equipment Msp API", "/api"),
 ]
 
 sorted_routers = sorted(routers, key=lambda x: x[1])

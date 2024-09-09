@@ -218,10 +218,7 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
             data.weight = update.weight
         session.commit()
         session.refresh(data)
-    return {
-        "success": True,
-        "updatedCount": objectives_weights
-    }
+    return objectives_weights
 
 
 @router.post('/ins-constraints')
