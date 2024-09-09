@@ -10,7 +10,7 @@ from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
-from schemas.generate_masterplan import UpdateObjectivesWeightsSchema
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -78,143 +78,9 @@ def constraints(
 
     return {
         'data': {
-            'constraints': units,
+            'constraints': [ConstraintsResponseSchema.from_orm(unit) for unit in units],
             'objective': objectives
         }
-    }
-
-    # setobj = session.query(Objectives).order_by(Objectives.id).all()
-    # all_ots = session.query(Ot).order_by(Ot.id).all()
-    # all_equipment_msps = session.query(
-    #     EquipmentMsp).order_by(EquipmentMsp.id).all()
-    # all_clashing_groups = session.query(
-    #     ClashingGroups).order_by(ClashingGroups.id).all()
-    # all_days = session.query(Day).order_by(Day.day_id).all()
-    # all_ot_types = session.query(OtType).order_by(OtType.id).all()
-    # all_subspecialties = session.query(
-    #     Subspecialty).order_by(Subspecialty.id).all()
-
-    # total = len(units)
-    # constraints = []
-
-    # for unit in units:
-    #     subspecialty_opt = [
-    #         {"value": subspecialty.id, "label": subspecialty.description}
-    #         for subspecialty in all_subspecialties
-    #     ]
-
-    #     selected_subspecialties = [
-    #         {"value": subspecialty.id, "label": subspecialty.description}
-    #         for scg in unit.subspecialty.subspecialties_clashing_groups
-    #         for subspecialty in all_subspecialties if subspecialty.id == scg.subspecialty_id
-    #     ]
-
-    #     existing_fixed_ot_ids = {fot.ot_id for fot in unit.fixed_ots}
-    #     existing_blocked_ot_ids = {bot.ot_id for bot in unit.blocked_ots}
-    #     existing_preferred_ot_ids = {pot.ot_id for pot in unit.preferred_ots}
-
-    #     fixed_ot_opts = [{"label": ot.id, "value": ot.id} for ot in all_ots]
-    #     blocked_ot_opts = [{"label": ot.id, "value": ot.id} for ot in all_ots]
-    #     preferred_ot_opts = [
-    #         {"label": ot.id, "value": ot.id}
-    #         for ot in all_ots if ot.id not in existing_preferred_ot_ids
-    #     ]
-
-    #     fixed_ot = [
-    #         {"label": fot.ot_id, "value": fot.ot_id}
-    #         for fot in unit.fixed_ots
-    #     ]
-    #     blocked_ot = [
-    #         {"label": bot.ot_id, "value": bot.ot_id}
-    #         for bot in unit.blocked_ots
-    #     ]
-    #     preferred_ot = [
-    #         {"label": pot.ot_id, "value": pot.ot_id}
-    #         for pot in unit.preferred_ots
-    #     ]
-
-    #     equipment_requirement_opts = [
-    #         {"label": emsp.name, "value": emsp.id} for emsp in all_equipment_msps
-    #     ]
-    #     equipment_requirements = [
-    #         {"label": emsp.name, "value": emsp.id}
-    #         for er in unit.equipment_requirements
-    #         for emsp in all_equipment_msps if er.equipment_id == emsp.id
-    #     ]
-
-    #     clashing_group_opts = [
-    #         {"label": cg.description, "value": cg.id} for cg in all_clashing_groups
-    #     ]
-    #     clashing_groups = [
-    #         {"label": cg.description, "value": cg.id}
-    #         for scg in unit.subspecialty.subspecialties_clashing_groups
-    #         for cg in scg.clashing_groups
-    #     ]
-
-    #     blocked_day_opts = [
-    #         {"label": day.name, "value": day.day_id} for day in all_days
-    #     ]
-    #     blocked_days = [
-    #         {"label": day.name, "value": day.day_id}
-    #         for bd in unit.blocked_days for day in bd.day
-    #     ]
-
-    #     ot_types = {}
-    #     existing_ot_type_ids = {
-    #         sot.ot_type_id for sot in unit.subspecialty.subspecialties_ot_types
-    #     }
-    #     for sot in unit.subspecialty.subspecialties_ot_types:
-    #         for ot_type in sot.ot_type:
-    #             ot_types[to_camel_case(ot_type.description)] = {
-    #                 "value": True, "id": ot_type.id
-    #             }
-
-    #     for ot_type in all_ot_types:
-    #         if ot_type.id not in existing_ot_type_ids:
-    #             ot_types[to_camel_case(ot_type.description)] = {
-    #                 "value": False, "id": ot_type.id
-    #             }
-
-    #     constraints.append({
-    #         "id": unit.id,
-    #         "name": unit.name,
-    #         "subspecialty_id": unit.subspecialty_id,
-    #         "is_require_anaes": unit.is_require_anaes,
-    #         "max_slot_limit": unit.max_slot_limit,
-    #         "no_of_slots": unit.no_of_slots,
-    #         "resource_requirement_id": unit.resource_requirement_id,
-    #         "FixedOT": fixed_ot,
-    #         "FixedOtOpt": fixed_ot_opts,
-    #         "BlockedOT": blocked_ot,
-    #         "BlockedOtOpt": blocked_ot_opts,
-    #         "PreferredOT": preferred_ot,
-    #         "PreferredOtOpt": preferred_ot_opts,
-    #         "EquipmentRequirement": equipment_requirements,
-    #         "EquipmentRequirementOpt": equipment_requirement_opts,
-    #         "ClashingGroup": clashing_groups,
-    #         "ClashingGroupOpt": clashing_group_opts,
-    #         "BlockedDay": blocked_days,
-    #         "BlockedDayOpt": blocked_day_opts,
-    #         "OtTypes": ot_types,
-    #         "SubspecialtyOpt": subspecialty_opt,
-    #         "SelectedSubspecialties": selected_subspecialties,
-    #     })
-
-    # setobj_data = [
-    #     {"id": obj.id, "objectives": obj.objectives, "weight": obj.weight}
-    #     for obj in setobj
-    # ]
-
-    # reformatted_data = {
-    #     "constraints": constraints,
-    #     "objective": setobj_data,
-    # }
-
-    return {
-        "total": 'total',
-        "offset": offset,
-        "limit": limit,
-        "data": 'reformatted_data'
     }
 
 
