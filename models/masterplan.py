@@ -2,6 +2,7 @@ from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 
 class Masterplan(Base):
@@ -12,3 +13,4 @@ class Masterplan(Base):
     objective_value = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     uploaded_file = Column(String(length=255), nullable=False)
+    ot_assignment = relationship('OtAssignment', back_populates='masterplan')

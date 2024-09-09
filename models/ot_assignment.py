@@ -2,6 +2,7 @@ from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import DateTime, Integer, Boolean
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class OtAssignment(Base):
@@ -16,3 +17,8 @@ class OtAssignment(Base):
     is_require_anaes = Column(Boolean, nullable=False)
     opening_time = Column(DateTime, nullable=False)
     closing_time = Column(DateTime, nullable=False)
+    masterplan = relationship('Masterplan', back_populates='ot_assignment')
+    week = relationship('Week', back_populates='ot_assignment')
+    ot = relationship('Ot', back_populates='ot_assignment')
+    unit = relationship('Unit', back_populates='ot_assignment')
+    day = relationship('Day', back_populates='ot_assignment')

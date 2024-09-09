@@ -2,6 +2,7 @@ from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Boolean
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class Unit(Base):
@@ -9,7 +10,7 @@ class Unit(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(length=255), nullable=False)
-    subspecialty_id = Column(
+    sub_specialty_id = Column(
         Integer,
         ForeignKey('sub_specialty.id'),
         nullable=False
@@ -19,3 +20,13 @@ class Unit(Base):
     no_of_slots = Column(Integer, nullable=False)
     resource_requirement_id = Column(Integer, nullable=False)
     color_hex = Column(String(length=7), nullable=False)
+    sub_specialty = relationship('SubSpecialty', back_populates='unit')
+    blocked_day = relationship('BlockedDay', back_populates='unit')
+    blocked_ot = relationship('BlockedOt', back_populates='unit')
+    equipment_requirement = relationship(
+        'EquipmentRequirement',
+        back_populates='unit'
+    )
+    fixed_ot = relationship('FixedOt', back_populates='unit')
+    ot_assignment = relationship('OtAssignment', back_populates='unit')
+    preferred_ot = relationship('PreferredOt', back_populates='unit')

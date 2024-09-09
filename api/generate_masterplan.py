@@ -10,6 +10,7 @@ from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -18,7 +19,16 @@ from models.unit import Unit
 from models.week import Week
 from models.day import Day
 from models.objectives import Objectives
-from schemas.generate_masterplan import UpdateObjectivesWeightsSchema
+from models.fixed_ot import FixedOt
+from models.blocked_ot import BlockedOt
+from models.preferred_ot import PreferredOt
+from models.equipment_requirement import EquipmentRequirement
+from models.blocked_day import BlockedDay
+from models.sub_specialty import SubSpecialty
+from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
+from models.clashing_groups import ClashingGroups
+from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
+from models.ot_type import OtType
 
 router = APIRouter()
 
@@ -63,8 +73,27 @@ def constraints(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    units = session.query(Unit).join().order_by(
-        Unit.id).offset(offset).limit(limit).all()
+    try:
+        units = (
+            session.query(Unit)
+            .outerjoin(FixedOt)
+            .outerjoin(BlockedOt)
+            .outerjoin(PreferredOt)
+            .outerjoin(BlockedDay)
+            .outerjoin(EquipmentRequirement)
+            .outerjoin(SubSpecialty)
+            .outerjoin(SubSpecialtiesClashingGroups)
+            .outerjoin(Unit.sub_specialty)
+            .outerjoin(SubSpecialtiesOtTypes)
+            .order_by(Unit.id)
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        return units
+    except Exception as error:
+        send_error_response(str(error))
 
     # setobj = session.query(Objectives).order_by(Objectives.id).all()
     # all_ots = session.query(Ot).order_by(Ot.id).all()

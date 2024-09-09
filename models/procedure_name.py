@@ -2,6 +2,7 @@ from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class ProcedureName(Base):
@@ -13,4 +14,8 @@ class ProcedureName(Base):
         Integer,
         ForeignKey('sub_specialty.id'),
         nullable=False
+    )
+    sub_specialty = relationship(
+        'SubSpecialty',
+        back_populates='procedure_name'
     )
