@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.to_camel_case import to_camel_case
+from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from typing import Literal, Optional
 from sqlalchemy import asc, desc
@@ -19,6 +20,8 @@ from models.unit import Unit
 from models.week import Week
 from models.day import Day
 from models.objectives import Objectives
+from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
+from models.ot_type import OtType
 
 router = APIRouter()
 
@@ -75,9 +78,14 @@ def constraints(
         .order_by(Unit.id)  # type: ignore
         .all()
     )
+    for unit in units:
+        sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
+            SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
+        unit.OtTypes = transform_ot_types(sub_specialty_ot_type, session)
 
     return {
         'data': {
+            # 'constraints': units,
             'constraints': [ConstraintsResponseSchema.from_orm(unit) for unit in units],
             'objective': objectives
         }

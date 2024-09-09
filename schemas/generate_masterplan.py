@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Dict
 from pydantic import BaseModel
 from typing import List
 
@@ -42,11 +42,17 @@ class FixedOtSchema(BaseModel):
     label: str
 
 
+class OtTypeSchema(BaseModel):
+    id: int
+    value: bool
+
+
 class ConstraintsResponseSchema(BaseModel):
     id: int
     name: str
     max_slot_limit: int
     no_of_slots: int
+    OtTypes: Dict[str, OtTypeSchema]
     BlockedOt: List[BlockedOtSchema] = []
     PreferredOt: List[PreferredOtSchema] = []
     BlockedDay: List[BlockedDaySchema] = []
