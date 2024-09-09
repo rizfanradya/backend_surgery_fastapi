@@ -11,6 +11,8 @@ import api.ot_assignment as ot_assignment
 import api.week as week
 import api.day as day
 import api.ot_type as ot_type
+import api.status as status
+import api.masterplan as masterplan
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -25,6 +27,8 @@ routers = [
     (backup.router, "Backup API", "/api/backup"),
     (day.router, "Day API", "/api"),
     (ot_type.router, "Ot Type API", "/api"),
+    (status.router, "Status API", "/api"),
+    (masterplan.router, "Master Plan API", "/api"),
 ]
 
 sorted_routers = sorted(routers, key=lambda x: x[1])
