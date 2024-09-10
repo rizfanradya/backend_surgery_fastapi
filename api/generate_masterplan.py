@@ -10,7 +10,7 @@ from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
 import os
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
@@ -388,8 +388,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
 
 @router.post('/generate')
 def generate_masterplan(
-    start_date: datetime = Form(...),
-    end_date: datetime = Form(...),
+    start_date: dt_datetime = Form(...),
+    end_date: dt_datetime = Form(...),
     file: UploadFile = File(...),
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
@@ -397,8 +397,8 @@ def generate_masterplan(
     check_excell_format(file, session, token)
     file.file.seek(0)
 
-    start_date_str = parse_date(str(start_date))
-    end_date_str = parse_date(str(end_date))
+    start_date_str = parse_date(start_date)
+    end_date_str = parse_date(end_date)
 
     total_weight, num_objectives = session.query(
         func.sum(Objectives.weight),
@@ -449,9 +449,9 @@ def generate_masterplan(
     ).all()  # type: ignore
     clashing_group_map = {}
     for cg in clashing_groups:
-        if cg.subspecialty_id not in clashing_group_map:
-            clashing_group_map[cg.subspecialty_id] = []
-        clashing_group_map[cg.subspecialty_id].append(cg.clashing_group_id)
+        if cg.sub_specialty_id not in clashing_group_map:
+            clashing_group_map[cg.sub_specialty_id] = []
+        clashing_group_map[cg.sub_specialty_id].append(cg.clashing_group_id)
 
     contents = file.file.read()
     excel_data = BytesIO(contents)
@@ -461,7 +461,7 @@ def generate_masterplan(
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
-    )[1:]:
+    ):
         try:
             booking_date = parse_date(row[0])
         except ValueError as error:
@@ -478,12 +478,12 @@ def generate_masterplan(
                 f"Invalid date format for operation date: {error}")
 
         try:
-            age = int(row[3])
+            age = int(str(row[3]))
         except ValueError as error:
             send_error_response(f"Invalid age format: {error}")
 
         try:
-            duration = int(row[14])
+            duration = int(str(row[14]))
         except ValueError as error:
             send_error_response(f"Invalid duration format: {error}")
 
@@ -495,20 +495,21 @@ def generate_masterplan(
         if day_id == 0:
             continue
 
-        for subspecialty_id, clashing_ids in clashing_group_map.items():
+        for sub_specialty_id, clashing_ids in clashing_group_map.items():
             if unit_id in clashing_ids:
                 send_error_response(
-                    f"Clashing detected for subspecialty {subspecialty_id} with unit {unit_id}")
+                    f"Clashing detected for subspecialty {sub_specialty_id} with unit {unit_id}")
 
         surgery_schema = SurgerySchema(
-            mrn=row[2],
+            mrn=str(row[2]),
             unit_id=unit_id,
             booking_date=booking_date,
             estimated_duration=duration,
             procedure_name_id=procedure_name_id,
             age=age,
-            gender_code=row[4].upper(),
-            surgeon=row[16]
+            gender_code='P' if isinstance(
+                row[4], str) and row[4].upper() == 'P' else 'L',
+            surgeon=str(row[16])
         )
         ot_assignment_schema = OtAssignmentSchema(
             mssp_id=new_masterplan.id,
@@ -531,7 +532,6 @@ def generate_masterplan(
         session.commit()
         session.refresh(new_surgery)
         session.refresh(new_ot_assignment)
-
     return new_masterplan
 
 
