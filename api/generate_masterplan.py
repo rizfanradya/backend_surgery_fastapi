@@ -242,9 +242,10 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     if item.id != fixed_ot_type.id:
                         item.value = False
 
+                fixed_ot_ids = set()
                 for fixed_ot in constraint.fixed_ots:
                     ot_data = session.query(Ot).get(fixed_ot.value)
-                    if ot_data is not None:
+                    if ot_data is not None and fixed_ot.value not in fixed_ot_ids:
                         fixed_ot_schema = FixedOtSchema(
                             unit_id=constraint.id,
                             ot_id=fixed_ot.value
@@ -253,10 +254,12 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                         session.add(new_fixed_ot)
                         session.commit()
                         session.refresh(new_fixed_ot)
+                        fixed_ot_ids.add(fixed_ot.value)
             else:
+                blocked_ot_ids = set()
                 for blocked_ot in constraint.blocked_ots:
                     ot_data = session.query(Ot).get(blocked_ot.value)
-                    if ot_data is not None:
+                    if ot_data is not None and blocked_ot.value not in blocked_ot_ids:
                         blocked_ot_schema = BlockedOtSchema(
                             unit_id=constraint.id,
                             ot_id=blocked_ot.value
@@ -265,19 +268,23 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                         session.add(new_blocked_ot)
                         session.commit()
                         session.refresh(new_blocked_ot)
+                        blocked_ot_ids.add(blocked_ot.value)
 
+                preferred_ot_ids = set()
                 for preferred_ot in constraint.preferred_ots:
                     ot_data = session.query(Ot).get(preferred_ot.value)
-                    if ot_data is not None:
+                    if ot_data is not None and preferred_ot.value not in preferred_ot_ids:
                         preferred_ot_schema = PreferredOtSchema(
                             unit_id=constraint.id,
                             ot_id=preferred_ot.value
                         )
                         new_preferred_ot = PreferredOt(
-                            **preferred_ot_schema.dict())
+                            **preferred_ot_schema.dict()
+                        )
                         session.add(new_preferred_ot)
                         session.commit()
                         session.refresh(new_preferred_ot)
+                        preferred_ot_ids.add(preferred_ot.value)
 
             for key, item in constraint.ot_types.items():
                 ot_type_data = session.query(OtType).get(item.id)
@@ -293,9 +300,10 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.commit()
                     session.refresh(new_sub_specialties_ot_types)
 
+            blocked_day_ids = set()
             for blocked_day in constraint.blocked_days:
                 day_data = session.query(Day).get(blocked_day.value)
-                if day_data is not None:
+                if day_data is not None and blocked_day.value not in blocked_day_ids:
                     blocked_day_schema = BlockedDaySchema(
                         unit_id=constraint.id,
                         day_id=blocked_day.value
@@ -304,11 +312,13 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.add(new_blocked_day)
                     session.commit()
                     session.refresh(new_blocked_day)
+                    blocked_day_ids.add(blocked_day.value)
 
+            equipment_ids = set()
             for equipment_requirement in constraint.equipment_requirements:
                 equipment_data = session.query(Equipment).get(
                     equipment_requirement.value)
-                if equipment_data is not None:
+                if equipment_data is not None and equipment_requirement.value not in equipment_ids:
                     equipment_requirement_schema = EquipmentRequirementSchema(
                         unit_id=constraint.id,
                         equipment_id=equipment_requirement.value,
@@ -320,14 +330,19 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.add(new_equipment_requirement)
                     session.commit()
                     session.refresh(new_equipment_requirement)
+                    equipment_ids.add(equipment_requirement.value)
 
             clashing_group_ids = []
+            unique_sub_specialties = set()
             sub_specialty_ids = [unit_data.sub_specialty_id]
-            for sub_specialty in constraint.sub_specialtys[:2]:
+            for sub_specialty in constraint.sub_specialtys:
+                if sub_specialty.value not in unique_sub_specialties:
+                    unique_sub_specialties.add(sub_specialty.value)
+            for value in list(unique_sub_specialties)[:2]:
                 sub_specialty_data = session.query(
-                    SubSpecialty).get(sub_specialty.value)
+                    SubSpecialty).get(value)
                 if sub_specialty_data is not None:
-                    sub_specialty_ids.append(sub_specialty.value)
+                    sub_specialty_ids.append(value)
             for i in range(len(sub_specialty_ids)):
                 for j in range(i + 1, len(sub_specialty_ids)):
                     new_clashing_group_schema = ClashingGroupsSchema(
