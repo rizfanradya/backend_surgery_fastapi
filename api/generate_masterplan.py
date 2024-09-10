@@ -321,13 +321,13 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.commit()
                     session.refresh(new_equipment_requirement)
 
+            clashing_group_ids = []
             sub_specialty_ids = [unit_data.sub_specialty_id]
-            for sub_specialty in constraint.sub_specialtys:
+            for sub_specialty in constraint.sub_specialtys[:2]:
                 sub_specialty_data = session.query(
                     SubSpecialty).get(sub_specialty.value)
                 if sub_specialty_data is not None:
                     sub_specialty_ids.append(sub_specialty.value)
-            clashing_group_ids = []
             for i in range(len(sub_specialty_ids)):
                 for j in range(i + 1, len(sub_specialty_ids)):
                     new_clashing_group_schema = ClashingGroupsSchema(
