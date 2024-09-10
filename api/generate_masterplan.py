@@ -5,13 +5,16 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
-from typing import Literal, Optional, List
+from typing import Literal, Optional
 from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
 from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema
+from schemas.fixed_ot import FixedOtSchema
+from schemas.blocked_ot import BlockedOtSchema
+from schemas.preferred_ot import PreferredOtSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -25,6 +28,9 @@ from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
 from models.ot_type import OtType
 from models.equipment_msp import EquipmentMsp
 from models.sub_specialty import SubSpecialty
+from models.fixed_ot import FixedOt
+from models.blocked_ot import BlockedOt
+from models.preferred_ot import PreferredOt
 
 router = APIRouter()
 
@@ -177,6 +183,7 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
         'sub_specialties_clashing_groups',
         'clashing_groups'
     ]
+
     session.execute('SET FOREIGN_KEY_CHECKS = 0;')
     for table in truncate_tables:
         session.execute(f'TRUNCATE TABLE {table}')
@@ -185,6 +192,7 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
 
     fixed_ot_type = session.query(OtType).where(
         OtType.description.like('%fix%')).first()
+
     for constraint in ins_constraints.insConstraints:
         unit_data = session.query(Unit).get(constraint.id)
 
@@ -198,10 +206,42 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             send_error_response(
                 'At least one ot type should be selected for each unit.'
             )
+
         if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
             for key, item in constraint.ot_types.items():
                 if item.id != fixed_ot_type.id:
                     item.value = False
+
+            for fixed_ot in constraint.fixed_ots:
+                fixed_ot_schema = FixedOtSchema(
+                    unit_id=constraint.id,
+                    ot_id=fixed_ot.value
+                )
+                new_fixed_ot = FixedOt(**fixed_ot_schema.dict())
+                session.add(new_fixed_ot)
+                session.commit()
+                session.refresh(new_fixed_ot)
+        else:
+            for blocked_ot in constraint.blocked_ots:
+                blocked_ot_schema = BlockedOtSchema(
+                    unit_id=constraint.id,
+                    ot_id=blocked_ot.value
+                )
+                new_blocked_ot = BlockedOt(**blocked_ot_schema.dict())
+                session.add(new_blocked_ot)
+                session.commit()
+                session.refresh(new_blocked_ot)
+
+            for preferred_ot in constraint.preferred_ots:
+                preferred_ot_schema = PreferredOtSchema(
+                    unit_id=constraint.id,
+                    ot_id=preferred_ot.value
+                )
+                new_preferred_ot = PreferredOt(**preferred_ot_schema.dict())
+                session.add(new_preferred_ot)
+                session.commit()
+                session.refresh(new_preferred_ot)
+
         for key, item in constraint.ot_types.items():
             if item.value:
                 new_sub_specialties_ot_types_schema = SubSpecialtiesOtTypesSchema(
