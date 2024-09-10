@@ -191,6 +191,25 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
         'clashing_groups',
     ]
 
+    for constraint in ins_constraints.insConstraints:
+        if not any(item.value for key, item in constraint.ot_types.items()):
+            send_error_response(
+                'At least one ot type should be selected for each unit.'
+            )
+
+        blocked_ot_ids = {
+            blocked_ot.value for blocked_ot in constraint.blocked_ots
+        }
+        preferred_ot_ids = {
+            preferred_ot.value for preferred_ot in constraint.preferred_ots
+        }
+        intersection = blocked_ot_ids.intersection(preferred_ot_ids)
+        if intersection:
+            send_error_response(
+                f'Blocked OT and Preferred OT cannot have the same IDs: {
+                    intersection}'
+            )
+
     fixed_ot_type = session.query(OtType).where(
         OtType.description.like('%fix%')).first()
     ers_used_by_some = session.query(EquipmentRequirementStatus).where(
@@ -209,17 +228,11 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
 
     for constraint in ins_constraints.insConstraints:
         unit_data = session.query(Unit).get(constraint.id)
-
         if unit_data is not None:
             unit_data.max_slot_limit = constraint.max_slot_limit
             unit_data.no_of_slots = constraint.max_slot_limit if constraint.no_of_slots >= constraint.max_slot_limit else constraint.no_of_slots
             session.commit()
             session.refresh(unit_data)
-
-            if not any(item.value for key, item in constraint.ot_types.items()):
-                send_error_response(
-                    'At least one ot type should be selected for each unit.'
-                )
 
             if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
                 for key, item in constraint.ot_types.items():
