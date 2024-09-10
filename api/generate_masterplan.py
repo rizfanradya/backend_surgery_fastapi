@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
@@ -10,6 +10,7 @@ from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
+import os
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
 from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema
 from schemas.fixed_ot import FixedOtSchema
@@ -376,10 +377,31 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.add(new_sub_specialties_clashing_group)
                     session.commit()
                     session.refresh(new_sub_specialties_clashing_group)
+    return {'message': 'Constraints updated successfully.'}
 
 
 @router.post('/generate')
-def generate_masterplan(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+def generate_masterplan(
+    start_date: datetime = Form(...),
+    end_date: datetime = Form(...),
+    file: UploadFile = File(...),
+    session: Session = Depends(get_db),
+    token: str = Depends(TokenAuthorization)
+):
+    check_excell_format(file, session, token)
+    file.file.seek(0)
+    abs_path = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(abs_path))
+    upload_dir = os.path.join(base_dir, 'uploads')
+    os.makedirs(upload_dir, exist_ok=True)
+    file_extension = file.filename.split('.')[-1]  # type: ignore
+    filename = f'aaa.{file_extension}'
+    file_path = os.path.join(upload_dir, filename)
+    try:
+        with open(file_path, 'wb') as f:
+            f.write(file.file.read())
+    except Exception as error:
+        send_error_response(str(error), 'Failed to save file')
     return 'ok'
 
 
