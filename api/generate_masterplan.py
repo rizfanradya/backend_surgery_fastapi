@@ -11,7 +11,7 @@ from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
-from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, ResponseSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -59,7 +59,7 @@ def masterplan(
     }
 
 
-@router.get('/constraints')
+@router.get('/constraints', response_model=ResponseSchema)
 def constraints(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
@@ -85,8 +85,8 @@ def constraints(
 
     return {
         'data': {
-            # 'constraints': units,
-            'constraints': [ConstraintsResponseSchema.from_orm(unit) for unit in units],
+            'constraints': units,
+            # 'constraints': [ConstraintsResponseSchema.from_orm(unit) for unit in units],
             'objective': objectives
         }
     }

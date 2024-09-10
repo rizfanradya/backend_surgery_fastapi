@@ -53,11 +53,32 @@ class ConstraintsResponseSchema(BaseModel):
     max_slot_limit: int
     no_of_slots: int
     OtTypes: Dict[str, OtTypeSchema]
-    BlockedOt: List[BlockedOtSchema] = []
-    PreferredOt: List[PreferredOtSchema] = []
-    BlockedDay: List[BlockedDaySchema] = []
-    EquipmentRequirement: List[EquipmentRequirementSchema] = []
-    FixedOt: List[FixedOtSchema] = []
+    blocked_ot: List[BlockedOtSchema] = []
+    preferred_ot: List[PreferredOtSchema] = []
+    blocked_day: List[BlockedDaySchema] = []
+    equipment_requirement: List[EquipmentRequirementSchema] = []
+    fixed_ot: List[FixedOtSchema] = []
+
+    class Config:
+        orm_mode = True
+
+
+class ObjectiveSchema(BaseModel):
+    id: int
+    weight: int
+    objectives: str
+
+    class Config:
+        orm_mode = True
+
+
+class DataSchema(BaseModel):
+    constraints: List[ConstraintsResponseSchema]
+    objective: List[ObjectiveSchema]
+
+
+class ResponseSchema(BaseModel):
+    data: DataSchema
 
     class Config:
         orm_mode = True
