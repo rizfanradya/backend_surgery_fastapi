@@ -489,9 +489,11 @@ def generate_masterplan(
 
         procedure_name_id = procedure_name_map.get(row[13], 0)
         unit_id = unit_name_map.get(row[10], 0)
-        ot_id = ot_name_map.get(row[12], 0)
+        ot_id = ot_name_map.get(str(row[12]), 0)
         day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
+        if ot_id == 0:
+            continue
         if day_id == 0:
             continue
 
@@ -521,7 +523,7 @@ def generate_masterplan(
             opening_time=datetime.strptime(
                 '09:00:00.0000', '%H:%M:%S.%f').time(),
             closing_time=datetime.strptime(
-                '09:00:00.0000', '%H:%M:%S.%f').time()
+                '16:00:00.0000', '%H:%M:%S.%f').time()
         )
 
         new_surgery = Surgery(**surgery_schema.dict())
@@ -532,6 +534,8 @@ def generate_masterplan(
         session.commit()
         session.refresh(new_surgery)
         session.refresh(new_ot_assignment)
+
+    new_masterplan.id
     return new_masterplan
 
 
