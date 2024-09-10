@@ -17,6 +17,8 @@ from schemas.blocked_ot import BlockedOtSchema
 from schemas.preferred_ot import PreferredOtSchema
 from schemas.blocked_day import BlockedDaySchema
 from schemas.equipment_requirement import EquipmentRequirementSchema
+from schemas.clashing_groups import ClashingGroupsSchema
+from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -37,6 +39,7 @@ from models.blocked_day import BlockedDay
 from models.equipment_requirement import EquipmentRequirement
 from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
+from models.clashing_groups import ClashingGroups
 
 router = APIRouter()
 
@@ -317,6 +320,39 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.add(new_equipment_requirement)
                     session.commit()
                     session.refresh(new_equipment_requirement)
+
+            sub_specialty_ids = [unit_data.sub_specialty_id]
+            for sub_specialty in constraint.sub_specialtys:
+                sub_specialty_data = session.query(
+                    SubSpecialty).get(sub_specialty.value)
+                if sub_specialty_data is not None:
+                    sub_specialty_ids.append(sub_specialty.value)
+            clashing_group_ids = []
+            for i in range(len(sub_specialty_ids)):
+                for j in range(i + 1, len(sub_specialty_ids)):
+                    new_clashing_group_schema = ClashingGroupsSchema(
+                        description=f"Clashing Group: {
+                            sub_specialty_ids[i]} and {sub_specialty_ids[j]}"
+                    )
+                    new_clashing_group = ClashingGroups(
+                        **new_clashing_group_schema.dict()
+                    )
+                    session.add(new_clashing_group)
+                    session.commit()
+                    session.refresh(new_clashing_group)
+                    clashing_group_ids.append(new_clashing_group.id)
+            for clashing_group_id in clashing_group_ids:
+                for sub_specialty_id in sub_specialty_ids:
+                    new_sub_specialties_clashing_group_schema = SubSpecialtiesClashingGroupsSchema(
+                        sub_specialty_id=sub_specialty_id,
+                        clashing_group_id=clashing_group_id
+                    )
+                    new_sub_specialties_clashing_group = SubSpecialtiesClashingGroups(
+                        **new_sub_specialties_clashing_group_schema.dict()
+                    )
+                    session.add(new_sub_specialties_clashing_group)
+                    session.commit()
+                    session.refresh(new_sub_specialties_clashing_group)
 
 
 @router.post('/generate')
