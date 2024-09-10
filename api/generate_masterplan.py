@@ -424,9 +424,11 @@ def generate_masterplan(
             f.write(file.file.read())
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
+    file.file.seek(0)
     new_masterplan.uploaded_file = filename
     session.commit()
     session.refresh(new_masterplan)
+
     return new_masterplan
 
 
