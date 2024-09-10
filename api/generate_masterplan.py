@@ -11,6 +11,7 @@ from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
+from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -159,7 +160,7 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
     for update in objectives_weights.UpdatesObj:
         data = session.query(Objectives).get(update.id)
         if data is not None:
-            data.weight = update.weight
+            data.weight = 100 if update.weight >= 100 else update.weight
         session.commit()
         session.refresh(data)
     return objectives_weights
@@ -182,15 +183,37 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
     session.execute('SET FOREIGN_KEY_CHECKS = 1;')
     session.commit()
 
+    fixed_ot_type = session.query(OtType).where(
+        OtType.description.like('%fix%')).first()
     for constraint in ins_constraints.insConstraints:
         unit_data = session.query(Unit).get(constraint.id)
-        if constraint.no_of_slots >= constraint.max_slot_limit:
-            constraint.no_of_slots = constraint.max_slot_limit
+
         if unit_data is not None:
             unit_data.max_slot_limit = constraint.max_slot_limit
-            unit_data.no_of_slots = constraint.no_of_slots
+            unit_data.no_of_slots = constraint.max_slot_limit if constraint.no_of_slots >= constraint.max_slot_limit else constraint.no_of_slots
             session.commit()
             session.refresh(unit_data)
+
+        if not any(item.value for key, item in constraint.ot_types.items()):
+            send_error_response(
+                'At least one ot type should be selected for each unit.'
+            )
+        if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
+            for key, item in constraint.ot_types.items():
+                if item.id != fixed_ot_type.id:
+                    item.value = False
+        for key, item in constraint.ot_types.items():
+            if item.value:
+                new_sub_specialties_ot_types_schema = SubSpecialtiesOtTypesSchema(
+                    sub_specialty_id=unit_data.sub_specialty_id,
+                    ot_type_id=item.id
+                )
+                new_sub_specialties_ot_types = SubSpecialtiesOtTypes(
+                    **new_sub_specialties_ot_types_schema.dict()
+                )
+                session.add(new_sub_specialties_ot_types)
+                session.commit()
+                session.refresh(new_sub_specialties_ot_types)
 
 
 @router.post('/generate')
