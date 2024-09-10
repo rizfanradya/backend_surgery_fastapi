@@ -95,7 +95,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
 
     day_mapping = {day.id: day.name for day in all_days}
     er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
-    sub_specialty_mappintg = {
+    sub_specialty_mapping = {
         ssp.id: ssp.description for ssp in all_sub_specialty
     }
     for unit in units:
@@ -112,6 +112,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             {'value': ot.id, 'label': ot.id}
             for ot in all_ots
         ]
+
         unit.blocked_ots = [
             {'value': bot.ot_id, 'label': bot.ot_id}
             for bot in unit.blocked_ot
@@ -120,6 +121,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             {'value': ot.id, 'label': ot.id}
             for ot in all_ots
         ]
+
         unit.preferred_ots = [
             {'value': pot.ot_id, 'label': pot.ot_id}
             for pot in unit.preferred_ot
@@ -128,6 +130,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             {'value': ot.id, 'label': ot.id}
             for ot in all_ots
         ]
+
         unit.blocked_days = [
             {
                 'value': bday.day_id,
@@ -139,6 +142,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             {'value': day.id, 'label': day.name}
             for day in all_days
         ]
+
         unit.equipment_requirements = [
             {
                 'value': er_msp.equipment_id,
@@ -150,12 +154,16 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             {'value': equipment_msp.id, 'label': equipment_msp.name}
             for equipment_msp in all_equipment_msp
         ]
+
+        unique_sub_specialties = set()
+        for sscg in sub_specialty_clashing_groups:
+            unique_sub_specialties.add(sscg.sub_specialty_id)
         unit.sub_specialtys = [
             {
-                'value': sscg.id,
-                'label': sub_specialty_mappintg.get(sscg.id, 'Unknown')
+                'value': ssp_id,
+                'label': sub_specialty_mapping.get(ssp_id, 'Unknown')
             }
-            for sscg in sub_specialty_clashing_groups
+            for ssp_id in unique_sub_specialties
         ]
         unit.sub_specialty_opt = [
             {'value': ssp.id, 'label': ssp.description}
