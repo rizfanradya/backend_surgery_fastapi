@@ -3,7 +3,6 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
 from utils.auth import TokenAuthorization
-from utils.to_camel_case import to_camel_case
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from typing import Literal, Optional
@@ -64,33 +63,26 @@ def masterplan(
 
 # @router.get('/constraints')
 @router.get('/constraints', response_model=ConstraintsResponseSchema)
-def constraints(
-    session: Session = Depends(get_db),
-    token: str = Depends(TokenAuthorization)
-):
+def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     all_ots = session.query(Ot).all()
     all_days = session.query(Day).order_by(Day.id).all()  # type: ignore
     all_equipment_msp = session.query(EquipmentMsp).all()
     all_sub_specialty = session.query(SubSpecialty).all()
     objectives = session.query(Objectives).order_by(
         Objectives.id).all()  # type: ignore
-    units = (
-        session.query(Unit)
-        .options(
-            joinedload(Unit.fixed_ot),
-            joinedload(Unit.blocked_ot),
-            joinedload(Unit.preferred_ot),
-            joinedload(Unit.blocked_day),
-            joinedload(Unit.equipment_requirement),
-        )
-        .order_by(Unit.id)  # type: ignore
-        .all()
-    )
+    units = session.query(Unit).options(
+        joinedload(Unit.fixed_ot),
+        joinedload(Unit.blocked_ot),
+        joinedload(Unit.preferred_ot),
+        joinedload(Unit.blocked_day),
+        joinedload(Unit.equipment_requirement),
+    ).order_by(Unit.id).all()  # type: ignore
 
     day_mapping = {day.id: day.name for day in all_days}
     er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
     sub_specialty_mappintg = {
-        ssp.id: ssp.description for ssp in all_sub_specialty}
+        ssp.id: ssp.description for ssp in all_sub_specialty
+    }
     for unit in units:
         sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
             SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
