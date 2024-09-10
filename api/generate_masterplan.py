@@ -167,7 +167,30 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
 
 @router.post('/ins-constraints')
 def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+    truncate_tables = [
+        'sub_specialties_ot_types',
+        'blocked_day',
+        'blocked_ot',
+        'fixed_ot',
+        'preferred_ot',
+        'sub_specialties_clashing_groups',
+        'clashing_groups'
+    ]
+    session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+    for table in truncate_tables:
+        session.execute(f'TRUNCATE TABLE {table}')
+    session.execute('SET FOREIGN_KEY_CHECKS = 1;')
+    session.commit()
+
+    for constraint in ins_constraints.insConstraints:
+        unit_data = session.query(Unit).get(constraint.id)
+        if constraint.no_of_slots >= constraint.max_slot_limit:
+            constraint.no_of_slots = constraint.max_slot_limit
+        if unit_data is not None:
+            unit_data.max_slot_limit = constraint.max_slot_limit
+            unit_data.no_of_slots = constraint.no_of_slots
+            session.commit()
+            session.refresh(unit_data)
 
 
 @router.post('/generate')
