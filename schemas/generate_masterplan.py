@@ -3,82 +3,62 @@ from pydantic import BaseModel
 from typing import List
 
 
-class UpdateObjectivesWeightsSchemaItem(BaseModel):
+class ObjectivesItemSchema(BaseModel):
     id: int
     weight: int
 
 
 class UpdateObjectivesWeightsSchema(BaseModel):
-    UpdatesObj: List[UpdateObjectivesWeightsSchemaItem]
+    UpdatesObj: List[ObjectivesItemSchema]
 
 
-class BlockedOtSchema(BaseModel):
-    id: int
-    value: int
-    label: str
-
-
-class PreferredOtSchema(BaseModel):
-    id: int
-    value: int
-    label: str
-
-
-class BlockedDaySchema(BaseModel):
-    id: int
-    value: int
-    label: str
-
-
-class EquipmentRequirementSchema(BaseModel):
-    id: int
-    value: int
-    label: str
-
-
-class FixedOtSchema(BaseModel):
-    id: int
-    value: int
-    label: str
-
-
-class OtTypeSchema(BaseModel):
+class OtItemBaseSchema(BaseModel):
     id: int
     value: bool
 
 
-class ConstraintsResponseSchema(BaseModel):
+class UnitItemBaseSchema(BaseModel):
+    value: int
+    label: str
+
+
+class UnitBaseSchema(BaseModel):
     id: int
     name: str
     max_slot_limit: int
     no_of_slots: int
-    OtTypes: Dict[str, OtTypeSchema]
-    blocked_ot: List[BlockedOtSchema] = []
-    preferred_ot: List[PreferredOtSchema] = []
-    blocked_day: List[BlockedDaySchema] = []
-    equipment_requirement: List[EquipmentRequirementSchema] = []
-    fixed_ot: List[FixedOtSchema] = []
+    ot_types: Dict[str, OtItemBaseSchema]
+    fixed_ots: List[UnitItemBaseSchema] = []
+    fixed_ot_opt: List[UnitItemBaseSchema] = []
+    blocked_ots: List[UnitItemBaseSchema] = []
+    blocked_ot_opt: List[UnitItemBaseSchema] = []
+    preferred_ots: List[UnitItemBaseSchema] = []
+    preferred_ot_opt: List[UnitItemBaseSchema] = []
+    blocked_days: List[UnitItemBaseSchema] = []
+    blocked_day_opt: List[UnitItemBaseSchema] = []
+    equipment_requirements: List[UnitItemBaseSchema] = []
+    equipment_requirement_opt: List[UnitItemBaseSchema] = []
+    sub_specialtys: List[UnitItemBaseSchema] = []
+    sub_specialty_opt: List[UnitItemBaseSchema] = []
 
     class Config:
         orm_mode = True
 
 
-class ObjectiveSchema(BaseModel):
-    id: int
-    weight: int
+class ObjectiveBaseSchema(ObjectivesItemSchema):
     objectives: str
 
     class Config:
         orm_mode = True
 
 
-class DataSchema(BaseModel):
-    constraints: List[ConstraintsResponseSchema]
-    objective: List[ObjectiveSchema]
+class ConstraintsBaseSchema(BaseModel):
+    constraints: List[UnitBaseSchema]
+    objective: List[ObjectiveBaseSchema]
 
 
-class ResponseSchema(BaseModel):
-    data: DataSchema
+class ConstraintsResponseSchema(BaseModel):
+    data: ConstraintsBaseSchema
 
     class Config:
         orm_mode = True

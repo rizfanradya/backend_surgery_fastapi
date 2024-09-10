@@ -11,7 +11,7 @@ from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
-from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, ResponseSchema
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -22,6 +22,8 @@ from models.day import Day
 from models.objectives import Objectives
 from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
 from models.ot_type import OtType
+from models.equipment_msp import EquipmentMsp
+from models.sub_specialty import SubSpecialty
 
 router = APIRouter()
 
@@ -59,11 +61,16 @@ def masterplan(
     }
 
 
-@router.get('/constraints', response_model=ResponseSchema)
+# @router.get('/constraints')
+@router.get('/constraints', response_model=ConstraintsResponseSchema)
 def constraints(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    all_ots = session.query(Ot).all()
+    all_days = session.query(Day).order_by(Day.id).all()  # type: ignore
+    all_equipment_msp = session.query(EquipmentMsp).all()
+    all_sub_specialty = session.query(SubSpecialty).all()
     objectives = session.query(Objectives).order_by(
         Objectives.id).all()  # type: ignore
     units = (
@@ -78,15 +85,67 @@ def constraints(
         .order_by(Unit.id)  # type: ignore
         .all()
     )
+
+    day_mapping = {day.id: day.name for day in all_days}
+    er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
     for unit in units:
         sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
             SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
-        unit.OtTypes = transform_ot_types(sub_specialty_ot_type, session)
+        unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
+        unit.fixed_ots = [
+            {'value': fot.ot_id, 'label': fot.ot_id}
+            for fot in unit.fixed_ot
+        ]
+        unit.fixed_ot_opt = [
+            {'value': ot.id, 'label': ot.id}
+            for ot in all_ots
+        ]
+        unit.blocked_ots = [
+            {'value': bot.ot_id, 'label': bot.ot_id}
+            for bot in unit.blocked_ot
+        ]
+        unit.blocked_ot_opt = [
+            {'value': ot.id, 'label': ot.id}
+            for ot in all_ots
+        ]
+        unit.preferred_ots = [
+            {'value': pot.ot_id, 'label': pot.ot_id}
+            for pot in unit.preferred_ot
+        ]
+        unit.preferred_ot_opt = [
+            {'value': ot.id, 'label': ot.id}
+            for ot in all_ots
+        ]
+        unit.blocked_days = [
+            {
+                'value': bday.day_id,
+                'label': day_mapping.get(bday.day_id, 'Unknown')
+            }
+            for bday in unit.blocked_day
+        ]
+        unit.blocked_day_opt = [
+            {'value': day.id, 'label': day.name}
+            for day in all_days
+        ]
+        unit.equipment_requirements = [
+            {
+                'value': er_msp.equipment_id,
+                'label': er_msp_mapping.get(er_msp.equipment_id, 'Unknown')
+            }
+            for er_msp in unit.equipment_requirement
+        ]
+        unit.equipment_requirement_opt = [
+            {'value': equipment_msp.id, 'label': equipment_msp.name}
+            for equipment_msp in all_equipment_msp
+        ]
+        unit.sub_specialty_opt = [
+            {'value': ssp.id, 'label': ssp.description}
+            for ssp in all_sub_specialty
+        ]
 
     return {
         'data': {
             'constraints': units,
-            # 'constraints': [ConstraintsResponseSchema.from_orm(unit) for unit in units],
             'objective': objectives
         }
     }
