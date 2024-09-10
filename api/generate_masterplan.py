@@ -429,6 +429,22 @@ def generate_masterplan(
     session.commit()
     session.refresh(new_masterplan)
 
+    procedure_names = session.query(ProcedureName).all()
+    units = session.query(Unit).all()
+    ots = session.query(Ot).all()
+    procedure_name_map = {p.name: p.id for p in procedure_names}
+    unit_name_map = {u.name: u.id for u in units}
+    ot_name_map = {o.name: o.id for o in ots}
+
+    clashing_groups = session.query(SubSpecialtiesClashingGroups).options(
+        joinedload(SubSpecialtiesClashingGroups.clashing_groups)
+    ).all()  # type: ignore
+    clashing_group_map = {}
+    for cg in clashing_groups:
+        if cg.subspecialty_id not in clashing_group_map:
+            clashing_group_map[cg.subspecialty_id] = []
+        clashing_group_map[cg.subspecialty_id].append(cg.clashing_group_id)
+
     return new_masterplan
 
 
