@@ -6,7 +6,7 @@ from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from typing import Literal, Optional
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
@@ -20,6 +20,7 @@ from schemas.blocked_day import BlockedDaySchema
 from schemas.equipment_requirement import EquipmentRequirementSchema
 from schemas.clashing_groups import ClashingGroupsSchema
 from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema
+from schemas.masterplan import MasterPlanSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -390,19 +391,43 @@ def generate_masterplan(
 ):
     check_excell_format(file, session, token)
     file.file.seek(0)
+
+    total_weight, num_objectives = session.query(
+        func.sum(Objectives.weight),
+        func.count(Objectives.id)
+    ).one()
+    average_weight_obj = total_weight / num_objectives if num_objectives > 0 else 0
+    current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    last_id = session.query(Masterplan).order_by(
+        Masterplan.id.desc()).first()  # type: ignore
+    get_last_id = last_id.id+1 if last_id else 1
+    mssp_desc = f'MSSP: {get_last_id} generated at {current_timestamp}'
+
+    new_masterplan_schema = MasterPlanSchema(
+        description=mssp_desc,
+        objective_value=average_weight_obj,
+    )
+    new_masterplan = Masterplan(**new_masterplan_schema.dict())
+    session.add(new_masterplan)
+    session.commit()
+    session.refresh(new_masterplan)
+
     abs_path = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(abs_path))
     upload_dir = os.path.join(base_dir, 'uploads')
     os.makedirs(upload_dir, exist_ok=True)
     file_extension = file.filename.split('.')[-1]  # type: ignore
-    filename = f'aaa.{file_extension}'
+    filename = f'{new_masterplan.id}.{file_extension}'
     file_path = os.path.join(upload_dir, filename)
     try:
         with open(file_path, 'wb') as f:
             f.write(file.file.read())
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
-    return 'ok'
+    new_masterplan.uploaded_file = filename
+    session.commit()
+    session.refresh(new_masterplan)
+    return new_masterplan
 
 
 @router.get('/otassignment')

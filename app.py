@@ -5,6 +5,8 @@ from utils.config import SERVER_PORT
 from utils.router import router
 from utils.run_shell_command import run_shell_commands
 from utils.data_must_exist_db import data_that_must_exist_in_the_database
+from utils.remove_orphaned_files import check_and_remove_orphaned_files
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # FastAPI instance
 app = FastAPI(
@@ -22,10 +24,17 @@ app.add_middleware(
 
 app.include_router(router)
 
+# scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_and_remove_orphaned_files, 'interval', hours=1)
+scheduler.add_job(data_that_must_exist_in_the_database, 'interval', days=1)
+scheduler.start()
+
 
 @app.get("/")
 def root():
     data_that_must_exist_in_the_database()
+    check_and_remove_orphaned_files()
     return {"message": "HCTM Surgery API"}
 
 
@@ -33,6 +42,7 @@ def root():
 if __name__ == "__main__":
     run_shell_commands()
     data_that_must_exist_in_the_database()
+    check_and_remove_orphaned_files()
     uvicorn.run(
         "app:app", host="0.0.0.0",
         reload=True,

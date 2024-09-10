@@ -3,7 +3,7 @@ import api.user as user
 import api.auth as auth
 import api.generate_masterplan as generate_masterplan
 import api.generate_daily_schedule as generate_daily_schedule
-import api.backup as backup
+import api.settings_server as settings_server
 import api.procedure_name as procedure_name
 import api.ot as ot
 import api.unit as unit
@@ -38,7 +38,7 @@ routers = [
     (week.router, "Week API", "/api"),
     (generate_masterplan.router, "Generate Master Plan API", "/api/masplan"),
     (generate_daily_schedule.router, "Generate Daily Schedule API", "/api/schedule"),
-    (backup.router, "Backup API", "/api/backup"),
+    (settings_server.router, "Settings Server API", "/api"),
     (day.router, "Day API", "/api"),
     (ot_type.router, "Ot Type API", "/api"),
     (status.router, "Status API", "/api"),

@@ -5,7 +5,6 @@ from typing import List
 class MasterPlanSchema(BaseModel):
     description: str
     objective_value: int
-    uploaded_file: str
 
 
 class MasterPlanDataSchema(MasterPlanSchema):

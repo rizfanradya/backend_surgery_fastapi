@@ -4,6 +4,7 @@ from utils.database import get_db
 from sqlalchemy.orm import Session
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
+from utils.remove_orphaned_files import check_and_remove_orphaned_files
 from datetime import datetime
 import io
 import subprocess
@@ -16,8 +17,8 @@ from utils.config import (
 router = APIRouter()
 
 
-@router.get('/database')
-def database(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+@router.get('/backup_db')
+def backup_database(token: str = Depends(TokenAuthorization)):
     try:
         command = f"mysqldump -u {DB_USER} -p{DB_PASSWORD} {DB_NAME}"
         process = subprocess.Popen(
@@ -39,5 +40,23 @@ def database(session: Session = Depends(get_db), token: str = Depends(TokenAutho
             media_type='application/sql',
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
+    except Exception as error:
+        return send_error_response(str(error))
+
+
+@router.get('/truncate_master_tables')
+def truncate_master_tables(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    try:
+        truncate_tables = [
+            'masterplan',
+            'ot_assignment',
+        ]
+        session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+        for table in truncate_tables:
+            session.execute(f'TRUNCATE TABLE {table}')
+        session.execute('SET FOREIGN_KEY_CHECKS = 1;')
+        session.commit()
+        check_and_remove_orphaned_files()
+        return {'message': 'Master tables truncated successfully'}
     except Exception as error:
         return send_error_response(str(error))
