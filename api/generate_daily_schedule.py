@@ -1,24 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 from utils.database import get_db
 from sqlalchemy.orm import Session
 from utils.auth import TokenAuthorization
-
+from datetime import date as dt_datetime
 router = APIRouter()
-
-
-@router.get('/legend')
-def subspecialty_colors(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
-
-
-@router.get('/filter-specialty')
-def filter_specialty(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
-
-
-@router.get('/filter-ot')
-def filter_ot(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
 
 
 @router.get('/result')
@@ -32,7 +17,14 @@ def surgery_details(session: Session = Depends(get_db), token: str = Depends(Tok
 
 
 @router.post('/generate')
-def generate_daily_schedule(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+def generate_daily_schedule(
+    file: UploadFile = File(...),
+    master_plan_id: int = Form(...),
+    start_date: dt_datetime = Form(...),
+    end_date: dt_datetime = Form(...),
+    session: Session = Depends(get_db),
+    token: str = Depends(TokenAuthorization)
+):
     return 'ok'
 
 
