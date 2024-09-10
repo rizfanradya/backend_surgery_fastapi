@@ -15,6 +15,8 @@ from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema
 from schemas.fixed_ot import FixedOtSchema
 from schemas.blocked_ot import BlockedOtSchema
 from schemas.preferred_ot import PreferredOtSchema
+from schemas.blocked_day import BlockedDaySchema
+from schemas.equipment_requirement import EquipmentRequirementSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -31,6 +33,10 @@ from models.sub_specialty import SubSpecialty
 from models.fixed_ot import FixedOt
 from models.blocked_ot import BlockedOt
 from models.preferred_ot import PreferredOt
+from models.blocked_day import BlockedDay
+from models.equipment_requirement import EquipmentRequirement
+from models.equipment_requirement_status import EquipmentRequirementStatus
+from models.equipment import Equipment
 
 router = APIRouter()
 
@@ -181,17 +187,25 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
         'fixed_ot',
         'preferred_ot',
         'sub_specialties_clashing_groups',
-        'clashing_groups'
+        'equipment_requirement',
+        'clashing_groups',
     ]
+
+    fixed_ot_type = session.query(OtType).where(
+        OtType.description.like('%fix%')).first()
+    ers_used_by_some = session.query(EquipmentRequirementStatus).where(
+        EquipmentRequirementStatus.description.like('%used by some%')).first()
+
+    if fixed_ot_type is None or ers_used_by_some is None:
+        send_error_response(
+            'Fixed ot type or equipment requirement status not found in database.'
+        )
 
     session.execute('SET FOREIGN_KEY_CHECKS = 0;')
     for table in truncate_tables:
         session.execute(f'TRUNCATE TABLE {table}')
     session.execute('SET FOREIGN_KEY_CHECKS = 1;')
     session.commit()
-
-    fixed_ot_type = session.query(OtType).where(
-        OtType.description.like('%fix%')).first()
 
     for constraint in ins_constraints.insConstraints:
         unit_data = session.query(Unit).get(constraint.id)
@@ -202,58 +216,94 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             session.commit()
             session.refresh(unit_data)
 
-        if not any(item.value for key, item in constraint.ot_types.items()):
-            send_error_response(
-                'At least one ot type should be selected for each unit.'
-            )
+            if not any(item.value for key, item in constraint.ot_types.items()):
+                send_error_response(
+                    'At least one ot type should be selected for each unit.'
+                )
 
-        if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
+            if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
+                for key, item in constraint.ot_types.items():
+                    if item.id != fixed_ot_type.id:
+                        item.value = False
+
+                for fixed_ot in constraint.fixed_ots:
+                    ot_data = session.query(Ot).get(fixed_ot.value)
+                    if ot_data is not None:
+                        fixed_ot_schema = FixedOtSchema(
+                            unit_id=constraint.id,
+                            ot_id=fixed_ot.value
+                        )
+                        new_fixed_ot = FixedOt(**fixed_ot_schema.dict())
+                        session.add(new_fixed_ot)
+                        session.commit()
+                        session.refresh(new_fixed_ot)
+            else:
+                for blocked_ot in constraint.blocked_ots:
+                    ot_data = session.query(Ot).get(blocked_ot.value)
+                    if ot_data is not None:
+                        blocked_ot_schema = BlockedOtSchema(
+                            unit_id=constraint.id,
+                            ot_id=blocked_ot.value
+                        )
+                        new_blocked_ot = BlockedOt(**blocked_ot_schema.dict())
+                        session.add(new_blocked_ot)
+                        session.commit()
+                        session.refresh(new_blocked_ot)
+
+                for preferred_ot in constraint.preferred_ots:
+                    ot_data = session.query(Ot).get(preferred_ot.value)
+                    if ot_data is not None:
+                        preferred_ot_schema = PreferredOtSchema(
+                            unit_id=constraint.id,
+                            ot_id=preferred_ot.value
+                        )
+                        new_preferred_ot = PreferredOt(
+                            **preferred_ot_schema.dict())
+                        session.add(new_preferred_ot)
+                        session.commit()
+                        session.refresh(new_preferred_ot)
+
             for key, item in constraint.ot_types.items():
-                if item.id != fixed_ot_type.id:
-                    item.value = False
+                ot_type_data = session.query(OtType).get(item.id)
+                if item.value and ot_type_data is not None:
+                    new_sub_specialties_ot_types_schema = SubSpecialtiesOtTypesSchema(
+                        sub_specialty_id=unit_data.sub_specialty_id,
+                        ot_type_id=item.id
+                    )
+                    new_sub_specialties_ot_types = SubSpecialtiesOtTypes(
+                        **new_sub_specialties_ot_types_schema.dict()
+                    )
+                    session.add(new_sub_specialties_ot_types)
+                    session.commit()
+                    session.refresh(new_sub_specialties_ot_types)
 
-            for fixed_ot in constraint.fixed_ots:
-                fixed_ot_schema = FixedOtSchema(
-                    unit_id=constraint.id,
-                    ot_id=fixed_ot.value
-                )
-                new_fixed_ot = FixedOt(**fixed_ot_schema.dict())
-                session.add(new_fixed_ot)
-                session.commit()
-                session.refresh(new_fixed_ot)
-        else:
-            for blocked_ot in constraint.blocked_ots:
-                blocked_ot_schema = BlockedOtSchema(
-                    unit_id=constraint.id,
-                    ot_id=blocked_ot.value
-                )
-                new_blocked_ot = BlockedOt(**blocked_ot_schema.dict())
-                session.add(new_blocked_ot)
-                session.commit()
-                session.refresh(new_blocked_ot)
+            for blocked_day in constraint.blocked_days:
+                day_data = session.query(Day).get(blocked_day.value)
+                if day_data is not None:
+                    blocked_day_schema = BlockedDaySchema(
+                        unit_id=constraint.id,
+                        day_id=blocked_day.value
+                    )
+                    new_blocked_day = BlockedDay(**blocked_day_schema.dict())
+                    session.add(new_blocked_day)
+                    session.commit()
+                    session.refresh(new_blocked_day)
 
-            for preferred_ot in constraint.preferred_ots:
-                preferred_ot_schema = PreferredOtSchema(
-                    unit_id=constraint.id,
-                    ot_id=preferred_ot.value
-                )
-                new_preferred_ot = PreferredOt(**preferred_ot_schema.dict())
-                session.add(new_preferred_ot)
-                session.commit()
-                session.refresh(new_preferred_ot)
-
-        for key, item in constraint.ot_types.items():
-            if item.value:
-                new_sub_specialties_ot_types_schema = SubSpecialtiesOtTypesSchema(
-                    sub_specialty_id=unit_data.sub_specialty_id,
-                    ot_type_id=item.id
-                )
-                new_sub_specialties_ot_types = SubSpecialtiesOtTypes(
-                    **new_sub_specialties_ot_types_schema.dict()
-                )
-                session.add(new_sub_specialties_ot_types)
-                session.commit()
-                session.refresh(new_sub_specialties_ot_types)
+            for equipment_requirement in constraint.equipment_requirements:
+                equipment_data = session.query(Equipment).get(
+                    equipment_requirement.value)
+                if equipment_data is not None:
+                    equipment_requirement_schema = EquipmentRequirementSchema(
+                        unit_id=constraint.id,
+                        equipment_id=equipment_requirement.value,
+                        equipment_requirement_status_id=ers_used_by_some.id
+                    )
+                    new_equipment_requirement = EquipmentRequirement(
+                        **equipment_requirement_schema.dict()
+                    )
+                    session.add(new_equipment_requirement)
+                    session.commit()
+                    session.refresh(new_equipment_requirement)
 
 
 @router.post('/generate')
