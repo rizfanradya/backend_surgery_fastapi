@@ -21,6 +21,7 @@ from models.week import Week
 from models.day import Day
 from models.objectives import Objectives
 from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
+from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
 from models.ot_type import OtType
 from models.equipment_msp import EquipmentMsp
 from models.sub_specialty import SubSpecialty
@@ -88,9 +89,13 @@ def constraints(
 
     day_mapping = {day.id: day.name for day in all_days}
     er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
+    sub_specialty_mappintg = {
+        ssp.id: ssp.description for ssp in all_sub_specialty}
     for unit in units:
         sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
             SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
+        sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
+            SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
         unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
         unit.fixed_ots = [
             {'value': fot.ot_id, 'label': fot.ot_id}
@@ -137,6 +142,13 @@ def constraints(
         unit.equipment_requirement_opt = [
             {'value': equipment_msp.id, 'label': equipment_msp.name}
             for equipment_msp in all_equipment_msp
+        ]
+        unit.sub_specialtys = [
+            {
+                'value': sscg.id,
+                'label': sub_specialty_mappintg.get(sscg.id, 'Unknown')
+            }
+            for sscg in sub_specialty_clashing_groups
         ]
         unit.sub_specialty_opt = [
             {'value': ssp.id, 'label': ssp.description}
