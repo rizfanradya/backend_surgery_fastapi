@@ -5,6 +5,7 @@ from alembic import context
 from utils.database import DATABASE_URL, Base
 
 from models.user import *
+from models.surgery import *
 from models.masterplan import *
 from models.procedure_name import *
 from models.ot import *

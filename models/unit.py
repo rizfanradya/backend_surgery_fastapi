@@ -30,3 +30,4 @@ class Unit(Base):
     fixed_ot = relationship('FixedOt', back_populates='unit')
     ot_assignment = relationship('OtAssignment', back_populates='unit')
     preferred_ot = relationship('PreferredOt', back_populates='unit')
+    surgery = relationship('Surgery', back_populates='unit')

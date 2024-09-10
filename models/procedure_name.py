@@ -3,6 +3,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from .surgery import Surgery
 
 
 class ProcedureName(Base):
@@ -17,5 +18,9 @@ class ProcedureName(Base):
     )
     sub_specialty = relationship(
         'SubSpecialty',
+        back_populates='procedure_name'
+    )
+    surgery = relationship(
+        'Surgery',
         back_populates='procedure_name'
     )

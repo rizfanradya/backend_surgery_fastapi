@@ -50,6 +50,7 @@ def truncate_master_tables(session: Session = Depends(get_db), token: str = Depe
         truncate_tables = [
             'masterplan',
             'ot_assignment',
+            'surgery',
         ]
         session.execute('SET FOREIGN_KEY_CHECKS = 0;')
         for table in truncate_tables:
