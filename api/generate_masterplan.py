@@ -5,12 +5,12 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 from sqlalchemy import asc, desc
 from io import BytesIO
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
-from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema
+from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -61,7 +61,6 @@ def masterplan(
     }
 
 
-# @router.get('/constraints')
 @router.get('/constraints', response_model=ConstraintsResponseSchema)
 def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     all_ots = session.query(Ot).all()
@@ -167,7 +166,7 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
 
 
 @router.post('/ins-constraints')
-def set_constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     return 'ok'
 
 

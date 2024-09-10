@@ -3,13 +3,20 @@ from pydantic import BaseModel
 from typing import List
 
 
-class ObjectivesItemSchema(BaseModel):
+class ObjectivesItemBaseSchema(BaseModel):
     id: int
     weight: int
 
 
 class UpdateObjectivesWeightsSchema(BaseModel):
-    UpdatesObj: List[ObjectivesItemSchema]
+    UpdatesObj: List[ObjectivesItemBaseSchema]
+
+
+class ObjectiveResponseSchema(ObjectivesItemBaseSchema):
+    objectives: str
+
+    class Config:
+        orm_mode = True
 
 
 class OtItemBaseSchema(BaseModel):
@@ -28,25 +35,18 @@ class UnitBaseSchema(BaseModel):
     max_slot_limit: int
     no_of_slots: int
     ot_types: Dict[str, OtItemBaseSchema]
-    fixed_ots: List[UnitItemBaseSchema] = []
-    fixed_ot_opt: List[UnitItemBaseSchema] = []
-    blocked_ots: List[UnitItemBaseSchema] = []
-    blocked_ot_opt: List[UnitItemBaseSchema] = []
-    preferred_ots: List[UnitItemBaseSchema] = []
-    preferred_ot_opt: List[UnitItemBaseSchema] = []
-    blocked_days: List[UnitItemBaseSchema] = []
-    blocked_day_opt: List[UnitItemBaseSchema] = []
-    equipment_requirements: List[UnitItemBaseSchema] = []
-    equipment_requirement_opt: List[UnitItemBaseSchema] = []
-    sub_specialtys: List[UnitItemBaseSchema] = []
-    sub_specialty_opt: List[UnitItemBaseSchema] = []
-
-    class Config:
-        orm_mode = True
-
-
-class ObjectiveBaseSchema(ObjectivesItemSchema):
-    objectives: str
+    fixed_ots: List[UnitItemBaseSchema]
+    fixed_ot_opt: List[UnitItemBaseSchema]
+    blocked_ots: List[UnitItemBaseSchema]
+    blocked_ot_opt: List[UnitItemBaseSchema]
+    preferred_ots: List[UnitItemBaseSchema]
+    preferred_ot_opt: List[UnitItemBaseSchema]
+    blocked_days: List[UnitItemBaseSchema]
+    blocked_day_opt: List[UnitItemBaseSchema]
+    equipment_requirements: List[UnitItemBaseSchema]
+    equipment_requirement_opt: List[UnitItemBaseSchema]
+    sub_specialtys: List[UnitItemBaseSchema]
+    sub_specialty_opt: List[UnitItemBaseSchema]
 
     class Config:
         orm_mode = True
@@ -54,7 +54,7 @@ class ObjectiveBaseSchema(ObjectivesItemSchema):
 
 class ConstraintsBaseSchema(BaseModel):
     constraints: List[UnitBaseSchema]
-    objective: List[ObjectiveBaseSchema]
+    objective: List[ObjectiveResponseSchema]
 
 
 class ConstraintsResponseSchema(BaseModel):
@@ -62,3 +62,20 @@ class ConstraintsResponseSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class InsertConstraintsBaseSchema(BaseModel):
+    id: int
+    max_slot_limit: int
+    no_of_slots: int
+    ot_types: Dict[str, OtItemBaseSchema]
+    fixed_ots: List[UnitItemBaseSchema]
+    blocked_ots: List[UnitItemBaseSchema]
+    preferred_ots: List[UnitItemBaseSchema]
+    blocked_days: List[UnitItemBaseSchema]
+    equipment_requirements: List[UnitItemBaseSchema]
+    sub_specialtys: List[UnitItemBaseSchema]
+
+
+class InsertConstraintsSchema(BaseModel):
+    insConstraints: List[InsertConstraintsBaseSchema]
