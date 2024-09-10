@@ -23,6 +23,8 @@ from schemas.equipment_requirement import EquipmentRequirementSchema
 from schemas.clashing_groups import ClashingGroupsSchema
 from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema
 from schemas.masterplan import MasterPlanSchema
+from schemas.surgery import SurgerySchema
+from schemas.ot_assignment import OtAssignmentSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -44,6 +46,7 @@ from models.equipment_requirement import EquipmentRequirement
 from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
 from models.clashing_groups import ClashingGroups
+from models.surgery import Surgery
 
 router = APIRouter()
 
@@ -496,6 +499,38 @@ def generate_masterplan(
             if unit_id in clashing_ids:
                 send_error_response(
                     f"Clashing detected for subspecialty {subspecialty_id} with unit {unit_id}")
+
+        surgery_schema = SurgerySchema(
+            mrn=row[2],
+            unit_id=unit_id,
+            booking_date=booking_date,
+            estimated_duration=duration,
+            procedure_name_id=procedure_name_id,
+            age=age,
+            gender_code=row[4].upper(),
+            surgeon=row[16]
+        )
+        ot_assignment_schema = OtAssignmentSchema(
+            mssp_id=new_masterplan.id,
+            week_id=1,
+            ot_id=ot_id,
+            unit_id=unit_id,
+            day_id=day_id,
+            is_require_anaes=True if row[8] == 'Y'else False,
+            opening_time=datetime.strptime(
+                '09:00:00.0000', '%H:%M:%S.%f').time(),
+            closing_time=datetime.strptime(
+                '09:00:00.0000', '%H:%M:%S.%f').time()
+        )
+
+        new_surgery = Surgery(**surgery_schema.dict())
+        new_ot_assignment = OtAssignment(**ot_assignment_schema.dict())
+        session.add(new_surgery)
+        session.add(new_ot_assignment)
+        session.commit()
+        session.commit()
+        session.refresh(new_surgery)
+        session.refresh(new_ot_assignment)
 
     return new_masterplan
 
