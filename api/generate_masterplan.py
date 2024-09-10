@@ -5,6 +5,8 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
+from utils.parse_date import parse_date
+from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func
 from io import BytesIO
@@ -392,6 +394,9 @@ def generate_masterplan(
     check_excell_format(file, session, token)
     file.file.seek(0)
 
+    start_date_str = parse_date(str(start_date))
+    end_date_str = parse_date(str(end_date))
+
     total_weight, num_objectives = session.query(
         func.sum(Objectives.weight),
         func.count(Objectives.id)
@@ -444,6 +449,53 @@ def generate_masterplan(
         if cg.subspecialty_id not in clashing_group_map:
             clashing_group_map[cg.subspecialty_id] = []
         clashing_group_map[cg.subspecialty_id].append(cg.clashing_group_id)
+
+    contents = file.file.read()
+    excel_data = BytesIO(contents)
+    workbook = load_workbook(excel_data)
+    sheet = workbook.active
+
+    for row_idx, row in enumerate(
+        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
+        start=2
+    )[1:]:
+        try:
+            booking_date = parse_date(row[0])
+        except ValueError as error:
+            send_error_response(
+                f"Invalid date format for booking date: {error}")
+
+        if booking_date < start_date_str or booking_date > end_date_str:
+            continue
+
+        try:
+            operation_date = parse_date(row[1])
+        except ValueError as error:
+            send_error_response(
+                f"Invalid date format for operation date: {error}")
+
+        try:
+            age = int(row[3])
+        except ValueError as error:
+            send_error_response(f"Invalid age format: {error}")
+
+        try:
+            duration = int(row[14])
+        except ValueError as error:
+            send_error_response(f"Invalid duration format: {error}")
+
+        procedure_name_id = procedure_name_map.get(row[13], 0)
+        unit_id = unit_name_map.get(row[10], 0)
+        ot_id = ot_name_map.get(row[12], 0)
+        day_id = map_day_of_week_to_day_id(str(operation_date), session)
+
+        if day_id == 0:
+            continue
+
+        for subspecialty_id, clashing_ids in clashing_group_map.items():
+            if unit_id in clashing_ids:
+                send_error_response(
+                    f"Clashing detected for subspecialty {subspecialty_id} with unit {unit_id}")
 
     return new_masterplan
 
