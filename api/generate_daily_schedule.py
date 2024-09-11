@@ -24,9 +24,10 @@ def schedule_results_and_filter(session: Session = Depends(get_db), token: str =
     return 'ok'
 
 
-@router.get('/surgery-details/{mrn_id}')
-def surgery_details(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+@router.get('/surgery-details/{mrn}')
+def surgery_details(mrn: str, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    return session.query(ScheduleResults).where(
+        ScheduleResults.mrn == mrn).first()
 
 
 @router.post('/generate')
