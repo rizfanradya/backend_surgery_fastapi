@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
+from utils.parse_date import parse_date
 from utils.add_duration import add_duration
 from datetime import date as dt_datetime, datetime, time
 from openpyxl import load_workbook
@@ -66,7 +67,7 @@ def generate_daily_schedule(
         start=2
     ):
         try:
-            booking_date = datetime.strptime(str(row[0]), '%Y-%m-%d')
+            booking_date = parse_date(str(row[0]))
         except ValueError as error:
             send_error_response(
                 f"Invalid date format for booking date: {error}"

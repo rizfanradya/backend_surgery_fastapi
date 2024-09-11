@@ -22,7 +22,7 @@ def create_schedule_results(schedule_results: ScheduleResultsSchema, session: Se
     except Exception as error:
         send_error_response(
             str(error),
-            'format time or date is invalid or week id or masterplan id or ot id or unit id in ot assignment not found'
+            'format time or date is invalid or masterplan id or ot id or unit id in ot assignment not found'
         )
 
 
@@ -41,7 +41,7 @@ def update_schedule_results(id: int, schedule_results: ScheduleResultsSchema, se
     except Exception as error:
         send_error_response(
             str(error),
-            'format time or date is invalid or week id or masterplan id or ot id or unit id in ot assignment not found'
+            'format time or date is invalid or masterplan id or ot id or unit id in ot assignment not found'
         )
 
 

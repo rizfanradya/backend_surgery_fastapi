@@ -12,7 +12,7 @@ class ScheduleResults(Base):
     run_id = Column(String(length=255), nullable=False)
     mrn = Column(Text, nullable=False)
     age = Column(Integer, nullable=False)
-    week_id = Column(Integer, ForeignKey('week.id'), nullable=False)
+    week_id = Column(Integer, nullable=False)
     week_day = Column(String(length=255), nullable=False)
     surgery_date = Column(Date, nullable=False)
     type_of_surgery = Column(Text, nullable=False)
@@ -56,7 +56,6 @@ class ScheduleResults(Base):
     )
     icu_start_time = Column(Time, nullable=False)
     icu_end_time = Column(Time, nullable=False)
-    week = relationship('Week', back_populates='schedule_results')
     phu = relationship(
         'OtAssignment',
         back_populates='phu_schedule_results',
