@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from utils.database import get_db
 from sqlalchemy.orm import Session
 from utils.auth import TokenAuthorization
@@ -8,6 +9,7 @@ from utils.parse_date import parse_date
 from utils.add_duration import add_duration
 from datetime import date as dt_datetime, datetime, time
 from openpyxl import load_workbook
+from pandas import DataFrame
 from io import BytesIO
 from sqlalchemy import func
 from typing import Dict, Optional
@@ -216,6 +218,31 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
     }
 
 
-@router.post('/export')
-def export_schedule_results(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+@router.get('/export')
+def export_schedule_results(run_id: str, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    schedule_result = session.query(ScheduleResults).where(
+        ScheduleResults.run_id == run_id).all()
+
+    if not schedule_result:
+        send_error_response('Run ID not found')
+
+    data = [r.__dict__ for r in schedule_result]
+    df = DataFrame(data)
+    df = df[[
+        'id', 'run_id', 'mrn', 'age', 'week_id', 'week_day', 'surgery_date',
+        'type_of_surgery', 'sub_specialty_desc', 'specialty_id', 'procedure_name',
+        'surgery_duration', 'phu_id', 'phu_start_time', 'phu_end_time',
+        'ot_id', 'ot_start_time', 'ot_end_time', 'surgeon_name'
+    ]]
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    output.seek(0)
+    filename = datetime.now().strftime(
+        f'schedule_results_{run_id}_%Y-%B-%d_%H:%M:%S.xlsx'
+    )
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
