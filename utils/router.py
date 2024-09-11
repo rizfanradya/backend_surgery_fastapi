@@ -28,6 +28,7 @@ import api.equipment_requirement as equipment_requirement
 import api.sub_specialties_clashing_groups as sub_specialties_clashing_groups
 import api.sub_specialties_ot_types as sub_specialties_ot_types
 import api.surgery as surgery
+import api.schedule_results as schedule_results
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -55,6 +56,7 @@ routers = [
     (blocked_day.router, "Blocked Day API", "/api"),
     (equipment.router, "Equipment API", "/api"),
     (surgery.router, "Surgery API", "/api"),
+    (schedule_results.router, "Schedule Results API", "/api"),
     (equipment_requirement.router, "Equipment Requirement API", "/api"),
     (
         equipment_requirement_status.router,
