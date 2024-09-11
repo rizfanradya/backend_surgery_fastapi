@@ -427,12 +427,12 @@ def generate_masterplan(
     file_extension = file.filename.split('.')[-1]  # type: ignore
     filename = f'{new_masterplan.id}.{file_extension}'
     file_path = os.path.join(upload_dir, filename)
+    contents = file.file.read()
     try:
         with open(file_path, 'wb') as f:
-            f.write(file.file.read())
+            f.write(contents)
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
-    file.file.seek(0)
     new_masterplan.uploaded_file = filename
     session.commit()
     session.refresh(new_masterplan)
@@ -453,7 +453,6 @@ def generate_masterplan(
             clashing_group_map[cg.sub_specialty_id] = []
         clashing_group_map[cg.sub_specialty_id].append(cg.clashing_group_id)
 
-    contents = file.file.read()
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
