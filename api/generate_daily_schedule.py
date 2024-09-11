@@ -42,16 +42,14 @@ def schedule_results_and_filter(
         schedule_results = schedule_results.where(
             ScheduleResults.sub_specialty_desc == subspecialty_desc)
 
-    total_schedule_results = schedule_results.count()
+    total = schedule_results.count()
     schedule_results = schedule_results.limit(limit).offset(offset).all()
     ot_data = session.query(Ot).all()
     subspecialties = session.query(SubSpecialty).all()
     subspecialty_colors = session.query(Unit).all()
     color_map = {sub.name: sub.color_hex for sub in subspecialty_colors}
 
-    series_data = []
     ot_data_count = {}
-
     for result in schedule_results:
         ot_data_count[result.ot_id] = ot_data_count.get(result.ot_id, 0) + 1
 
@@ -60,24 +58,14 @@ def schedule_results_and_filter(
         ot.category = f"OT {ot.id}\n{count} Surgeries"
 
     for result in schedule_results:
-        series_data.append({
-            "id": result.id,
-            "category": f"OT {result.ot_id}\n{ot_data_count.get(result.ot_id, 0)} Surgeries",
-            "start": result.ot_start_time,
-            "end": result.ot_end_time,
-            "task": f"MRN-{result.mrn}",
-            "subspeciality": result.sub_specialty_desc,
-            "color": color_map.get(result.sub_specialty_desc, ""),
-            "surgery_date": result.surgery_date,
-            "phu_start_time": result.phu_start_time,
-            "phu_end_time": result.phu_end_time,
-            "speciality_id": result.specialty_id,
-            "ot_id": result.ot_id,
-        })
+        get_odc = ot_data_count.get(result.ot_id, 0)
+        result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
+        result.task = f"MRN-{result.mrn}"
+        result.color = color_map.get(result.sub_specialty_desc, "")
 
     return {
-        "total": total_schedule_results,
-        "data": series_data,
+        "total": total,
+        "data": schedule_results,
         "ot": ot_data,
         "subspecialty_filter": subspecialties,
         "subspecialty_colors": subspecialty_colors,
