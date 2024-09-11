@@ -49,7 +49,6 @@ def schedule_results_and_filter(
     subspecialty_colors = session.query(Unit).all()
     color_map = {sub.name: sub.color_hex for sub in subspecialty_colors}
 
-    y_axis_data = []
     series_data = []
     ot_data_count = {}
 
@@ -58,9 +57,7 @@ def schedule_results_and_filter(
 
     for ot in ot_data:
         count = ot_data_count.get(ot.id, 0)
-        y_axis_data.append({
-            "category": f"OT {ot.id}\n{count} Surgeries"
-        })
+        ot.category = f"OT {ot.id}\n{count} Surgeries"
 
     for result in schedule_results:
         series_data.append({
@@ -80,17 +77,10 @@ def schedule_results_and_filter(
 
     return {
         "total": total_schedule_results,
-        "data": {
-            "chart_data": {
-                "yAxis_data": y_axis_data,
-                "series_data": series_data,
-            },
-        },
-        "filter": {
-            "ot_filter": ot_data,
-            "subspecialty_filter": subspecialties,
-            "subspecialty_colors": subspecialty_colors,
-        },
+        "data": series_data,
+        "ot": ot_data,
+        "subspecialty_filter": subspecialties,
+        "subspecialty_colors": subspecialty_colors,
     }
 
 
