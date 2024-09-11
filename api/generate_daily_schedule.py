@@ -9,6 +9,7 @@ from utils.add_duration import add_duration
 from datetime import date as dt_datetime, datetime, time
 from openpyxl import load_workbook
 from io import BytesIO
+from sqlalchemy import func
 from typing import Dict
 from schemas.schedule_results import ScheduleResultsSchema
 from models.masterplan import Masterplan
@@ -139,8 +140,28 @@ def generate_daily_schedule(
 
 
 @router.get('/run_id')
-def distinct_run_ids(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    subquery = (
+        session.query(
+            ScheduleResults.run_id,
+            func.min(ScheduleResults.id).label('min_id')
+        )
+        .group_by(ScheduleResults.run_id)  # type: ignore
+        .order_by(func.min(ScheduleResults.id))
+        .subquery()
+    )
+    total_query = session.query(func.count(subquery.c.run_id)).scalar()
+    data_query = (
+        session.query(subquery.c.run_id)
+        .order_by(subquery.c.min_id)  # type: ignore
+        .limit(limit)
+        .offset(offset)
+    )
+    data = data_query.all()
+    return {
+        "total": total_query,
+        "data": data
+    }
 
 
 @router.post('/export')
