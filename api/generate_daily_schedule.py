@@ -3,10 +3,16 @@ from utils.database import get_db
 from sqlalchemy.orm import Session
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
-from datetime import date as dt_datetime, datetime
+from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
+from utils.add_duration import add_duration
+from datetime import date as dt_datetime, datetime, time
 from openpyxl import load_workbook
 from io import BytesIO
+from typing import Dict
+from schemas.schedule_results import ScheduleResultsSchema
 from models.masterplan import Masterplan
+from models.ot_assignment import OtAssignment
+from models.schedule_results import ScheduleResults
 
 router = APIRouter()
 
@@ -54,7 +60,81 @@ def generate_daily_schedule(
     if master_plan is None:
         send_error_response('Master plan not found')
 
-    return 'ok'
+    ot_start_time_map: Dict[str, time] = {}
+    for row_idx, row in enumerate(
+        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
+        start=2
+    ):
+        try:
+            booking_date = datetime.strptime(str(row[0]), '%Y-%m-%d')
+        except ValueError as error:
+            send_error_response(
+                f"Invalid date format for booking date: {error}"
+            )
+
+        try:
+            age = int(str(row[2]))
+        except ValueError as error:
+            send_error_response(f"Invalid age format: {error}")
+
+        duration_str = str(row[11])
+        try:
+            duration_hours = int(duration_str[:2])
+            duration_minutes = int(duration_str[2:])
+            duration = duration_hours * 60 + duration_minutes
+        except ValueError as error:
+            send_error_response(f"Invalid duration format: {error}")
+
+        ot_assignment = session.query(OtAssignment).where(
+            OtAssignment.mssp_id == master_plan_id).first()
+        if ot_assignment is None:
+            continue
+
+        day_key = booking_date.strftime('%Y-%m-%d')
+        ot_start_time = ot_start_time_map.get(day_key, time(8, 0))
+        ot_end_time = add_duration(str(ot_start_time), duration)
+        ot_start_time_map[day_key] = ot_end_time
+
+        schedule_results_schema = ScheduleResultsSchema(
+            run_id=run_id,
+            mrn=str(row[1]),
+            age=age,
+            week_id=map_day_of_week_to_day_id(str(booking_date), session),
+            week_day=booking_date.strftime('%A'),
+            surgery_date=booking_date.date(),
+            type_of_surgery=str(row[7]),
+            sub_specialty_desc=str(row[8]),
+            specialty_id=str(row[9]),
+            procedure_name=str(row[10]),
+            surgery_duration=duration,
+            phu_id=ot_assignment.unit_id,
+            phu_start_time=ot_start_time,
+            phu_end_time=ot_end_time,
+            ot_id=ot_assignment.ot_id,
+            ot_start_time=ot_start_time,
+            ot_end_time=ot_end_time,
+            surgeon_name=str(row[13]),
+            post_op_id=ot_assignment.unit_id,
+            post_op_start_time=ot_end_time,
+            post_op_end_time=add_duration(str(ot_end_time), 30),
+            pacu_id=ot_assignment.unit_id,
+            pacu_start_time=ot_end_time,
+            pacu_end_time=add_duration(str(ot_end_time), 60),
+            icu_id=ot_assignment.unit_id,
+            icu_start_time=add_duration(str(ot_end_time), 60),
+            icu_end_time=add_duration(str(ot_end_time), 240)
+        )
+        new_schedule_results = ScheduleResults(
+            **schedule_results_schema.dict()
+        )
+        session.add(new_schedule_results)
+        session.commit()
+        session.refresh(new_schedule_results)
+
+    return {
+        "run_id": run_id,
+        "message": "Schedule generated successfully"
+    }
 
 
 @router.get('/run_id')
