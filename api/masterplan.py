@@ -6,6 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.masterplan import Masterplan
+from models.ot_assignment import OtAssignment
 from schemas.masterplan import MasterPlanSchema, GetMasterPlanResponseSchema
 import os
 
@@ -55,7 +56,11 @@ def get_masterplan(limit: int = 10, offset: int = 0, search: Optional[str] = Non
 @router.delete('/masterplan/{id}')
 def delete_masterplan(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     data = session.query(Masterplan).get(id)
+    ota_data = session.query(OtAssignment).where(
+        OtAssignment.mssp_id == id).all()
     if data:
+        for ota in ota_data:
+            session.delete(ota)
         session.delete(data)
         session.commit()
         abs_path = os.path.abspath(__file__)
