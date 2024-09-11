@@ -56,7 +56,10 @@ def get_equipment_requirement_status(limit: int = 10, offset: int = 0, search: O
 
 @router.delete('/equipment_requirement_status/{id}')
 def delete_equipment_requirement_status(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(EquipmentRequirementStatus).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(EquipmentRequirementStatus).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

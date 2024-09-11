@@ -53,7 +53,10 @@ def get_status(limit: int = 10, offset: int = 0, search: Optional[str] = None, s
 
 @router.delete('/status/{id}')
 def delete_status(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(Status).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(Status).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

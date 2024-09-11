@@ -69,7 +69,10 @@ def get_sub_specialties_clashing_groups(limit: int = 10, offset: int = 0, search
 
 @router.delete('/sub_specialties_clashing_groups/{id}')
 def delete_sub_specialties_clashing_groups(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(SubSpecialtiesClashingGroups).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(SubSpecialtiesClashingGroups).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

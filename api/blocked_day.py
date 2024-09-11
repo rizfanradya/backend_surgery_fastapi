@@ -59,7 +59,10 @@ def get_blocked_day(limit: int = 10, offset: int = 0, search: Optional[str] = No
 
 @router.delete('/blocked_day/{id}')
 def delete_blocked_day(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(BlockedDay).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(BlockedDay).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

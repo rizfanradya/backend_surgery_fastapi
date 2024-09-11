@@ -59,7 +59,10 @@ def get_blocked_ot(limit: int = 10, offset: int = 0, search: Optional[str] = Non
 
 @router.delete('/blocked_ot/{id}')
 def delete_blocked_ot(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(BlockedOt).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(BlockedOt).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

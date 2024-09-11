@@ -67,7 +67,10 @@ def get_sub_specialties_ot_types(limit: int = 10, offset: int = 0, search: Optio
 
 @router.delete('/sub_specialties_ot_types/{id}')
 def delete_sub_specialties_ot_types(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(SubSpecialtiesOtTypes).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(SubSpecialtiesOtTypes).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

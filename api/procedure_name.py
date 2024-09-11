@@ -59,7 +59,10 @@ def get_procedure_name(limit: int = 10, offset: int = 0, search: Optional[str] =
 
 @router.delete('/procedure_name/{id}')
 def delete_procedure_name(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(ProcedureName).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(ProcedureName).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

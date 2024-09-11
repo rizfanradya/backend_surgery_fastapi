@@ -65,7 +65,10 @@ def get_surgery(limit: int = 10, offset: int = 0, search: Optional[str] = None, 
 
 @router.delete('/surgery/{id}')
 def delete_surgery(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(Surgery).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(Surgery).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

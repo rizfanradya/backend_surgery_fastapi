@@ -65,7 +65,10 @@ def get_ot_assignment(limit: int = 10, offset: int = 0, search: Optional[str] = 
 
 @router.delete('/ot_assignment/{id}')
 def delete_ot_assignment(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(OtAssignment).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(OtAssignment).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

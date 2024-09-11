@@ -65,7 +65,10 @@ def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, use
 
 @router.delete('/user/{id}')
 def delete_user(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    user = session.query(User).get(id)
-    if user:
-        session.delete(user)
-        session.commit()
+    try:
+        user = session.query(User).get(id)
+        if user:
+            session.delete(user)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

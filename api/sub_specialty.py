@@ -59,7 +59,10 @@ def get_sub_specialty(limit: int = 10, offset: int = 0, search: Optional[str] = 
 
 @router.delete('/sub_specialty/{id}')
 def delete_sub_specialty(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(SubSpecialty).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(SubSpecialty).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

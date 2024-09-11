@@ -59,7 +59,10 @@ def get_equipment_msp(limit: int = 10, offset: int = 0, search: Optional[str] = 
 
 @router.delete('/equipment_msp/{id}')
 def delete_equipment_msp(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(EquipmentMsp).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(EquipmentMsp).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')

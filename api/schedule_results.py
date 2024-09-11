@@ -65,7 +65,10 @@ def get_schedule_results(limit: int = 10, offset: int = 0, search: Optional[str]
 
 @router.delete('/schedule_results/{id}')
 def delete_schedule_results(id: int, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    data = session.query(ScheduleResults).get(id)
-    if data:
-        session.delete(data)
-        session.commit()
+    try:
+        data = session.query(ScheduleResults).get(id)
+        if data:
+            session.delete(data)
+            session.commit()
+    except Exception as error:
+        send_error_response(str(error), 'Cannot delete this data')
