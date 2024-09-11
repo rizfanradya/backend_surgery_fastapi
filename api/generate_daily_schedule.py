@@ -87,8 +87,6 @@ def surgery_details(mrn: str, session: Session = Depends(get_db), token: str = D
 def generate_daily_schedule(
     file: UploadFile = File(...),
     master_plan_id: int = Form(...),
-    start_date: dt_datetime = Form(...),
-    end_date: dt_datetime = Form(...),
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
