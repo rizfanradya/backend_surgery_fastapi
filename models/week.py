@@ -14,3 +14,4 @@ class Week(Base):
     status = relationship('Status', back_populates='week')
     day = relationship('Day', back_populates='week')
     ot_assignment = relationship('OtAssignment', back_populates='week')
+    schedule_results = relationship('ScheduleResults', back_populates='week')
