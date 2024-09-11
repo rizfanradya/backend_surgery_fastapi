@@ -12,13 +12,16 @@ router = APIRouter()
 
 @router.post('/equipment_requirement_status')
 def create_equipment_requirement_status(equipment_requirement_status: EquipmentRequirementStatusSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = EquipmentRequirementStatus(
-        **equipment_requirement_status.dict()
-    )
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = EquipmentRequirementStatus(
+            **equipment_requirement_status.dict()
+        )
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'Cannot insert this data')
 
 
 @router.put('/equipment_requirement_status/{id}')
@@ -26,12 +29,15 @@ def update_equipment_requirement_status(id: int, equipment_requirement_status: E
     data_info = session.query(EquipmentRequirementStatus).get(id)
     if data_info is None:
         send_error_response('Data not found')
-    for key, value in equipment_requirement_status.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        for key, value in equipment_requirement_status.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'Cannot update this data')
 
 
 @router.get('/equipment_requirement_status', response_model=GetEquipmentRequirementStatusResponseSchema)

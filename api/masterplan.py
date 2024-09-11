@@ -15,11 +15,14 @@ router = APIRouter()
 
 @router.post('/masterplan')
 def create_masterplan(masterplan: MasterPlanSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = Masterplan(**masterplan.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = Masterplan(**masterplan.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'Cannot insert this data')
 
 
 @router.put('/masterplan/{id}')
@@ -27,12 +30,15 @@ def update_masterplan(id: int, masterplan: MasterPlanSchema, session: Session = 
     data_info = session.query(Masterplan).get(id)
     if data_info is None:
         send_error_response('Data not found')
-    for key, value in masterplan.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        for key, value in masterplan.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'Cannot update this data')
 
 
 @router.get('/masterplan', response_model=GetMasterPlanResponseSchema)

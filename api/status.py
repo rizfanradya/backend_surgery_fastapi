@@ -13,11 +13,14 @@ router = APIRouter()
 
 @router.post('/status')
 def create_status(status: StatusSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = Status(**status.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = Status(**status.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'Cannot insert this data')
 
 
 @router.put('/status/{id}')
@@ -25,12 +28,15 @@ def update_status(id: int, status: StatusSchema, session: Session = Depends(get_
     data_info = session.query(Status).get(id)
     if data_info is None:
         send_error_response('Data not found')
-    for key, value in status.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        for key, value in status.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'Cannot update this data')
 
 
 @router.get('/status', response_model=GetStatusResponseSchema)

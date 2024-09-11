@@ -13,11 +13,14 @@ router = APIRouter()
 
 @router.post('/clashing_groups')
 def create_clashing_groups(clashing_groups: ClashingGroupsSchema, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    new_data = ClashingGroups(**clashing_groups.dict())
-    session.add(new_data)
-    session.commit()
-    session.refresh(new_data)
-    return new_data
+    try:
+        new_data = ClashingGroups(**clashing_groups.dict())
+        session.add(new_data)
+        session.commit()
+        session.refresh(new_data)
+        return new_data
+    except Exception as error:
+        send_error_response(str(error), 'Cannot insert this data')
 
 
 @router.put('/clashing_groups/{id}')
@@ -25,12 +28,15 @@ def update_clashing_groups(id: int, clashing_groups: ClashingGroupsSchema, sessi
     data_info = session.query(ClashingGroups).get(id)
     if data_info is None:
         send_error_response('Data not found')
-    for key, value in clashing_groups.dict().items():
-        if value is not None:
-            setattr(data_info, key, value)
-    session.commit()
-    session.refresh(data_info)
-    return data_info
+    try:
+        for key, value in clashing_groups.dict().items():
+            if value is not None:
+                setattr(data_info, key, value)
+        session.commit()
+        session.refresh(data_info)
+        return data_info
+    except Exception as error:
+        send_error_response(str(error), 'Cannot update this data')
 
 
 @router.get('/clashing_groups', response_model=GetClashingGroupsResponseSchema)
