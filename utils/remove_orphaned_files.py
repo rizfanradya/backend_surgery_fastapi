@@ -11,7 +11,7 @@ def check_and_remove_orphaned_files():
     # Check and remove orphaned files in masterplan data
     data_in_user = [file[0] for file in session.query(Masterplan.uploaded_file).where(
         Masterplan.uploaded_file.isnot(None)).all()]
-    directory = os.path.join(base_dir, 'uploads')
+    directory = os.path.join(base_dir, 'uploads', 'masterplan')
     os.makedirs(directory, exist_ok=True)
     files_delete = [
         f for f in os.listdir(directory) if f not in data_in_user

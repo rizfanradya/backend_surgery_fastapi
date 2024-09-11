@@ -422,7 +422,7 @@ def generate_masterplan(
 
     abs_path = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(abs_path))
-    upload_dir = os.path.join(base_dir, 'uploads')
+    upload_dir = os.path.join(base_dir, 'uploads', 'masterplan')
     os.makedirs(upload_dir, exist_ok=True)
     file_extension = file.filename.split('.')[-1]  # type: ignore
     filename = f'{new_masterplan.id}.{file_extension}'
