@@ -10,24 +10,97 @@ from datetime import date as dt_datetime, datetime, time
 from openpyxl import load_workbook
 from io import BytesIO
 from sqlalchemy import func
-from typing import Dict
+from typing import Dict, Optional
 from schemas.schedule_results import ScheduleResultsSchema
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
 from models.schedule_results import ScheduleResults
+from models.ot import Ot
+from models.sub_specialty import SubSpecialty
+from models.unit import Unit
 
 router = APIRouter()
 
 
 @router.get('/result')
-def schedule_results_and_filter(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return 'ok'
+def schedule_results_and_filter(
+    surgery_date: dt_datetime,
+    ot_id: Optional[int] = None,
+    subspecialty_desc: Optional[str] = None,
+    limit: int = 10,
+    offset: int = 0,
+    session: Session = Depends(get_db),
+    token: str = Depends(TokenAuthorization)
+):
+    schedule_results = session.query(ScheduleResults).where(
+        ScheduleResults.surgery_date == surgery_date)
+
+    if ot_id:
+        schedule_results = schedule_results.where(
+            ScheduleResults.ot_id == ot_id)
+    if subspecialty_desc:
+        schedule_results = schedule_results.where(
+            ScheduleResults.sub_specialty_desc == subspecialty_desc)
+
+    total_schedule_results = schedule_results.count()
+    schedule_results = schedule_results.limit(limit).offset(offset).all()
+    ot_data = session.query(Ot).all()
+    subspecialties = session.query(SubSpecialty).all()
+    subspecialty_colors = session.query(Unit).all()
+    color_map = {sub.name: sub.color_hex for sub in subspecialty_colors}
+
+    y_axis_data = []
+    series_data = []
+    ot_data_count = {}
+
+    for result in schedule_results:
+        ot_data_count[result.ot_id] = ot_data_count.get(result.ot_id, 0) + 1
+
+    for ot in ot_data:
+        count = ot_data_count.get(ot.id, 0)
+        y_axis_data.append({
+            "category": f"OT {ot.id}\n{count} Surgeries"
+        })
+
+    for result in schedule_results:
+        series_data.append({
+            "id": result.id,
+            "category": f"OT {result.ot_id}\n{ot_data_count.get(result.ot_id, 0)} Surgeries",
+            "start": result.ot_start_time,
+            "end": result.ot_end_time,
+            "task": f"MRN-{result.mrn}",
+            "subspeciality": result.sub_specialty_desc,
+            "color": color_map.get(result.sub_specialty_desc, ""),
+            "surgery_date": result.surgery_date,
+            "phu_start_time": result.phu_start_time,
+            "phu_end_time": result.phu_end_time,
+            "speciality_id": result.specialty_id,
+            "ot_id": result.ot_id,
+        })
+
+    return {
+        "total": total_schedule_results,
+        "data": {
+            "chart_data": {
+                "yAxis_data": y_axis_data,
+                "series_data": series_data,
+            },
+        },
+        "filter": {
+            "ot_filter": ot_data,
+            "subspecialty_filter": subspecialties,
+            "subspecialty_colors": subspecialty_colors,
+        },
+    }
 
 
 @router.get('/surgery-details/{mrn}')
 def surgery_details(mrn: str, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    return session.query(ScheduleResults).where(
+    query = session.query(ScheduleResults).where(
         ScheduleResults.mrn == mrn).first()
+    if query is None:
+        send_error_response('MRN not found')
+    return query
 
 
 @router.post('/generate')
