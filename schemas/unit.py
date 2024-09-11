@@ -4,7 +4,7 @@ from typing import List
 
 class UnitSchema(BaseModel):
     name: str
-    subspecialty_id: int
+    sub_specialty_id: int
     is_require_anaes: bool
     max_slot_limit: int
     no_of_slots: int
