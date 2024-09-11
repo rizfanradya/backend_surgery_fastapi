@@ -615,18 +615,14 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
     workbook = load_workbook(excel_data)
     sheet = workbook.active
     actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
-    mismatched_headers = []
     for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
         if expected != actual:
-            mismatched_headers.append(
+            send_error_response(
                 f"Column {idx}: Expected '{expected}', found '{actual}'"
             )
-    if mismatched_headers:
-        return send_error_response(f"Mismatched columns: {', '.join(mismatched_headers)}")
     procedure_names = {p.name for p in session.query(ProcedureName).all()}
     ot_names = {o.name for o in session.query(Ot).all()}
     unit_names = {u.name for u in session.query(Unit).all()}
-    errors = []
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
@@ -635,25 +631,14 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         ot_list_name = str(row[12])
         subspeciality_desc = str(row[10])
         if procedure_name not in procedure_names:
-            errors.append({
-                'row': row_idx,
-                'column': 'PROCEDURE NAME',
-                'error': f"'{procedure_name}' not found in database."
-            })
+            send_error_response(
+                f'{procedure_name} in column PROCEDURE NAME and in row {row_idx} not found in database.')
         if ot_list_name not in ot_names:
-            errors.append({
-                'row': row_idx,
-                'column': 'OT LIST NAME',
-                'error': f"'{ot_list_name}' not found in database."
-            })
+            send_error_response(
+                f'{ot_list_name} in column OT LIST NAME and in row {row_idx} not found in database.')
         if subspeciality_desc not in unit_names:
-            errors.append({
-                'row': row_idx,
-                'column': 'SUBSPECIALITY DESC',
-                'error': f"'{subspeciality_desc}' not found in database."
-            })
-    if errors:
-        return send_error_response(errors, 'Invalid data found in the excel file.')
+            send_error_response(
+                f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
     return {'message': 'Excel file is valid with correct headers and data matching the database.'}
 
 
