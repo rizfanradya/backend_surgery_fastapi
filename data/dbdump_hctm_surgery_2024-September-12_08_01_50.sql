@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 8.0.38, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.39, for Win64 (x86_64)
 --
 -- Host: localhost    Database: hctm_surgery
 -- ------------------------------------------------------
@@ -7,7 +7,7 @@
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -34,7 +34,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5515bd47f21c');
+INSERT INTO `alembic_version` VALUES ('73b56522feb7');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -83,8 +83,8 @@ CREATE TABLE `blocked_ot` (
   KEY `ot_id` (`ot_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ix_blocked_ot_id` (`id`),
-  CONSTRAINT `blocked_ot_ibfk_1` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`),
-  CONSTRAINT `blocked_ot_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
+  CONSTRAINT `blocked_ot_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
+  CONSTRAINT `blocked_ot_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -196,7 +196,7 @@ CREATE TABLE `equipment_msp` (
   KEY `status_id` (`status_id`),
   KEY `ix_equipment_msp_id` (`id`),
   CONSTRAINT `equipment_msp_ibfk_1` FOREIGN KEY (`status_id`) REFERENCES `status` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -226,10 +226,10 @@ CREATE TABLE `equipment_requirement` (
   KEY `equipment_requirement_status_id` (`equipment_requirement_status_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ix_equipment_requirement_id` (`id`),
-  CONSTRAINT `equipment_requirement_ibfk_1` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`),
+  CONSTRAINT `equipment_requirement_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `equipment_requirement_ibfk_2` FOREIGN KEY (`equipment_requirement_status_id`) REFERENCES `equipment_requirement_status` (`id`),
-  CONSTRAINT `equipment_requirement_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `equipment_requirement_ibfk_3` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -255,7 +255,7 @@ CREATE TABLE `equipment_requirement_status` (
   `penalty_value` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_equipment_requirement_status_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -283,9 +283,9 @@ CREATE TABLE `fixed_ot` (
   KEY `ot_id` (`ot_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ix_fixed_ot_id` (`id`),
-  CONSTRAINT `fixed_ot_ibfk_1` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`),
-  CONSTRAINT `fixed_ot_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `fixed_ot_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
+  CONSTRAINT `fixed_ot_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -368,7 +368,7 @@ CREATE TABLE `ot` (
   KEY `status_id` (`status_id`),
   CONSTRAINT `ot_ibfk_1` FOREIGN KEY (`ot_type_id`) REFERENCES `ot_type` (`id`),
   CONSTRAINT `ot_ibfk_2` FOREIGN KEY (`status_id`) REFERENCES `status` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -405,9 +405,9 @@ CREATE TABLE `ot_assignment` (
   KEY `day_id` (`day_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ot_id` (`ot_id`),
-  CONSTRAINT `ot_assignment_ibfk_1` FOREIGN KEY (`week_id`) REFERENCES `week` (`id`),
+  CONSTRAINT `ot_assignment_ibfk_1` FOREIGN KEY (`day_id`) REFERENCES `day` (`id`),
   CONSTRAINT `ot_assignment_ibfk_2` FOREIGN KEY (`mssp_id`) REFERENCES `masterplan` (`id`),
-  CONSTRAINT `ot_assignment_ibfk_3` FOREIGN KEY (`day_id`) REFERENCES `day` (`id`),
+  CONSTRAINT `ot_assignment_ibfk_3` FOREIGN KEY (`week_id`) REFERENCES `week` (`id`),
   CONSTRAINT `ot_assignment_ibfk_4` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `ot_assignment_ibfk_5` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -434,7 +434,7 @@ CREATE TABLE `ot_type` (
   `description` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_ot_type_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -464,7 +464,7 @@ CREATE TABLE `preferred_ot` (
   KEY `ix_preferred_ot_id` (`id`),
   CONSTRAINT `preferred_ot_ibfk_1` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`),
   CONSTRAINT `preferred_ot_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -492,7 +492,7 @@ CREATE TABLE `procedure_name` (
   KEY `ix_procedure_name_id` (`id`),
   KEY `sub_specialty_id` (`sub_specialty_id`),
   CONSTRAINT `procedure_name_ibfk_1` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -549,11 +549,11 @@ CREATE TABLE `schedule_results` (
   KEY `post_op_id` (`post_op_id`),
   KEY `week_id` (`week_id`),
   KEY `ix_schedule_results_id` (`id`),
-  CONSTRAINT `schedule_results_ibfk_1` FOREIGN KEY (`icu_id`) REFERENCES `ot_assignment` (`unit_id`),
+  CONSTRAINT `schedule_results_ibfk_1` FOREIGN KEY (`pacu_id`) REFERENCES `ot_assignment` (`unit_id`),
   CONSTRAINT `schedule_results_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot_assignment` (`ot_id`),
-  CONSTRAINT `schedule_results_ibfk_3` FOREIGN KEY (`pacu_id`) REFERENCES `ot_assignment` (`unit_id`),
-  CONSTRAINT `schedule_results_ibfk_4` FOREIGN KEY (`phu_id`) REFERENCES `ot_assignment` (`unit_id`),
-  CONSTRAINT `schedule_results_ibfk_5` FOREIGN KEY (`post_op_id`) REFERENCES `ot_assignment` (`unit_id`)
+  CONSTRAINT `schedule_results_ibfk_3` FOREIGN KEY (`phu_id`) REFERENCES `ot_assignment` (`unit_id`),
+  CONSTRAINT `schedule_results_ibfk_4` FOREIGN KEY (`post_op_id`) REFERENCES `ot_assignment` (`unit_id`),
+  CONSTRAINT `schedule_results_ibfk_5` FOREIGN KEY (`icu_id`) REFERENCES `ot_assignment` (`unit_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -578,7 +578,7 @@ CREATE TABLE `specialty` (
   `name` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_specialty_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -603,7 +603,7 @@ CREATE TABLE `status` (
   `description` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_status_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -633,7 +633,7 @@ CREATE TABLE `sub_specialties_clashing_groups` (
   KEY `ix_sub_specialties_clashing_groups_id` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_1` FOREIGN KEY (`clashing_group_id`) REFERENCES `clashing_groups` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_2` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -663,7 +663,7 @@ CREATE TABLE `sub_specialties_ot_types` (
   KEY `ix_sub_specialties_ot_types_id` (`id`),
   CONSTRAINT `sub_specialties_ot_types_ibfk_1` FOREIGN KEY (`ot_type_id`) REFERENCES `ot_type` (`id`),
   CONSTRAINT `sub_specialties_ot_types_ibfk_2` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -692,7 +692,7 @@ CREATE TABLE `sub_specialty` (
   KEY `ix_sub_specialty_id` (`id`),
   KEY `specialty_id` (`specialty_id`),
   CONSTRAINT `sub_specialty_ibfk_1` FOREIGN KEY (`specialty_id`) REFERENCES `specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -726,8 +726,8 @@ CREATE TABLE `surgery` (
   KEY `procedure_name_id` (`procedure_name_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ix_surgery_id` (`id`),
-  CONSTRAINT `surgery_ibfk_1` FOREIGN KEY (`procedure_name_id`) REFERENCES `procedure_name` (`id`),
-  CONSTRAINT `surgery_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
+  CONSTRAINT `surgery_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
+  CONSTRAINT `surgery_ibfk_2` FOREIGN KEY (`procedure_name_id`) REFERENCES `procedure_name` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -760,7 +760,7 @@ CREATE TABLE `unit` (
   KEY `ix_unit_id` (`id`),
   KEY `sub_specialty_id` (`sub_specialty_id`),
   CONSTRAINT `unit_ibfk_1` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -819,7 +819,7 @@ CREATE TABLE `week` (
   KEY `ix_week_id` (`id`),
   KEY `status_id` (`status_id`),
   CONSTRAINT `week_ibfk_1` FOREIGN KEY (`status_id`) REFERENCES `status` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -841,4 +841,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-09-11 16:29:57
+-- Dump completed on 2024-09-12  8:01:50

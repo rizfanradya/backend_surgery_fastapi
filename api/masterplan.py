@@ -70,12 +70,13 @@ def delete_masterplan(id: int, session: Session = Depends(get_db), token: str = 
                 session.delete(ota)
             session.delete(data)
             session.commit()
-            abs_path = os.path.abspath(__file__)
-            base_dir = os.path.dirname(os.path.dirname(abs_path))
-            upload_dir = os.path.join(base_dir, 'uploads')
-            os.makedirs(upload_dir, exist_ok=True)
-            file_path = os.path.join(upload_dir, data.uploaded_file)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            if data.uplaoded_file is not None:
+                abs_path = os.path.abspath(__file__)
+                base_dir = os.path.dirname(os.path.dirname(abs_path))
+                upload_dir = os.path.join(base_dir, 'uploads')
+                os.makedirs(upload_dir, exist_ok=True)
+                file_path = os.path.join(upload_dir, data.uploaded_file)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
     except Exception as error:
         send_error_response(str(error), 'Cannot delete this data')
