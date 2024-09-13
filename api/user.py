@@ -22,7 +22,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_db)):
         session.refresh(new_user_info)
         return new_user_info
     except Exception as error:
-        send_error_response(str(error), 'User already exists')
+        send_error_response(
+            str(error),
+            'User already exists or role id not found'
+        )
 
 
 @router.put('/user/{id}')
@@ -39,7 +42,10 @@ def update_user(id: int, user: UserSchema, session: Session = Depends(get_db), t
         session.refresh(user_info)
         return user_info
     except Exception as error:
-        send_error_response(str(error), 'User already exists')
+        send_error_response(
+            str(error),
+            'User already exists or role id not found'
+        )
 
 
 @router.get('/user', response_model=GetUserResponseSchema)

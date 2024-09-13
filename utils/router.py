@@ -29,9 +29,11 @@ import api.sub_specialties_clashing_groups as sub_specialties_clashing_groups
 import api.sub_specialties_ot_types as sub_specialties_ot_types
 import api.surgery as surgery
 import api.schedule_results as schedule_results
+import api.role as role
 
 routers = [
     (auth.router, "Auth API", "/api"),
+    (role.router, "Role API", "/api"),
     (user.router, "User API", "/api"),
     (procedure_name.router, "Procedure Name API", "/api"),
     (ot.router, "Ot API", "/api"),

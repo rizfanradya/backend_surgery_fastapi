@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Literal, List
+from typing import List
 
 
 class BaseSchema(BaseModel):
@@ -7,7 +7,7 @@ class BaseSchema(BaseModel):
     first_name: str
     last_name: str
     is_active: bool
-    role: Literal['user', 'super admin', 'admin']
+    role_id: int
 
 
 class UserSchema(BaseSchema):

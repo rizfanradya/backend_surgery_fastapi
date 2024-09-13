@@ -1,7 +1,8 @@
 from utils.database import Base
-from sqlalchemy import Enum
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Boolean
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class User(Base):
@@ -13,8 +14,5 @@ class User(Base):
     first_name = Column(String(length=255), nullable=False)
     last_name = Column(String(length=255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    role = Column(
-        Enum('super admin', 'admin', 'user'),
-        default='user',
-        nullable=False
-    )
+    role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
+    role = relationship('Role', back_populates='user')
