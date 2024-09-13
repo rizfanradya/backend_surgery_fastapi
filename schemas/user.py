@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import List
+from schemas.role import RoleDataSchema
 
 
 class BaseSchema(BaseModel):
@@ -16,6 +17,7 @@ class UserSchema(BaseSchema):
 
 class UserDataSchema(BaseSchema):
     id: int
+    role: RoleDataSchema
 
     class Config:
         orm_mode = True

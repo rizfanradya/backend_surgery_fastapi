@@ -29,7 +29,7 @@ async def user_login(form_data: OAuth2PasswordRequestForm = Depends(), session: 
             "access_token": access_token,
             "refresh_token": refresh_token,
             "status": user_info.is_active,  # type: ignore
-            "role": user_info.role,  # type: ignore
+            "role": user_info.role.role,  # type: ignore
             "detail": "Login success"
         }
     else:
