@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 8.0.39, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.38, for Win64 (x86_64)
 --
 -- Host: localhost    Database: hctm_surgery
 -- ------------------------------------------------------
@@ -7,7 +7,7 @@
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8mb4 */;
+/*!50503 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -34,7 +34,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('73b56522feb7');
+INSERT INTO `alembic_version` VALUES ('c8e5f6f072bd');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -110,7 +110,7 @@ CREATE TABLE `clashing_groups` (
   `description` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_clashing_groups_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -119,7 +119,7 @@ CREATE TABLE `clashing_groups` (
 
 LOCK TABLES `clashing_groups` WRITE;
 /*!40000 ALTER TABLE `clashing_groups` DISABLE KEYS */;
-INSERT INTO `clashing_groups` VALUES (1,'Clashing Group: 1 and 2');
+INSERT INTO `clashing_groups` VALUES (1,'Clashing Group: 1 and 1'),(2,'Clashing Group: 2 and 2');
 /*!40000 ALTER TABLE `clashing_groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -229,7 +229,7 @@ CREATE TABLE `equipment_requirement` (
   CONSTRAINT `equipment_requirement_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `equipment_requirement_ibfk_2` FOREIGN KEY (`equipment_requirement_status_id`) REFERENCES `equipment_requirement_status` (`id`),
   CONSTRAINT `equipment_requirement_ibfk_3` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -285,7 +285,7 @@ CREATE TABLE `fixed_ot` (
   KEY `ix_fixed_ot_id` (`id`),
   CONSTRAINT `fixed_ot_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `fixed_ot_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -464,7 +464,7 @@ CREATE TABLE `preferred_ot` (
   KEY `ix_preferred_ot_id` (`id`),
   CONSTRAINT `preferred_ot_ibfk_1` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`),
   CONSTRAINT `preferred_ot_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -503,6 +503,32 @@ LOCK TABLES `procedure_name` WRITE;
 /*!40000 ALTER TABLE `procedure_name` DISABLE KEYS */;
 INSERT INTO `procedure_name` VALUES (1,'PROCEDURE - ADVANCE TRAUMA',1),(2,'PROCEDURE - ARTHOPLASTY',2),(3,'PROCEDURE - BREAST',3),(4,'PROCEDURE - BREAST & ENDOCRINE',4),(5,'PROCEDURE - CARDIOTHORASIC',5),(6,'PROCEDURE - COLORECTAL',6),(7,'PROCEDURE - HANDS & MICROSURGERY',7),(8,'PROCEDURE - HEPATOBILIARY',8),(9,'PROCEDURE - MAXILOFACIAL',9),(10,'PROCEDURE - NEUROSURGERY',10),(11,'PROCEDURE - OPHTHALMOLOGY',11),(12,'PROCEDURE - ORTHO-ONCOLOGY',12),(13,'PROCEDURE - ORTHOPEDIC',13),(14,'PROCEDURE - OTORHINOLARINGOLOGY',14),(15,'PROCEDURE - PAEDIATRIC ORTHOPEDIC',15),(16,'PROCEDURE - PAEDIATRIC SURGERY',16),(17,'PROCEDURE - PLASTIC',17),(18,'PROCEDURE - SPINAL',18),(19,'PROCEDURE - SPORT',19),(20,'PROCEDURE - SURGERY',20),(21,'PROCEDURE - TRAUMA',21),(22,'PROCEDURE - UKMSC',22),(23,'PROCEDURE - UPPER GI MINIMALLY INVASIVE',23),(24,'PROCEDURE - UROLOGY',24),(25,'PROCEDURE - VASCULAR',25);
 /*!40000 ALTER TABLE `procedure_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `role`
+--
+
+DROP TABLE IF EXISTS `role`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `role` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `role` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `role` (`role`),
+  KEY `ix_role_id` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `role`
+--
+
+LOCK TABLES `role` WRITE;
+/*!40000 ALTER TABLE `role` DISABLE KEYS */;
+INSERT INTO `role` VALUES (1,'admin'),(2,'user');
+/*!40000 ALTER TABLE `role` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -633,7 +659,7 @@ CREATE TABLE `sub_specialties_clashing_groups` (
   KEY `ix_sub_specialties_clashing_groups_id` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_1` FOREIGN KEY (`clashing_group_id`) REFERENCES `clashing_groups` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_2` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -642,7 +668,7 @@ CREATE TABLE `sub_specialties_clashing_groups` (
 
 LOCK TABLES `sub_specialties_clashing_groups` WRITE;
 /*!40000 ALTER TABLE `sub_specialties_clashing_groups` DISABLE KEYS */;
-INSERT INTO `sub_specialties_clashing_groups` VALUES (1,1,1),(2,1,2);
+INSERT INTO `sub_specialties_clashing_groups` VALUES (1,1,1),(2,1,1),(3,2,2),(4,2,2);
 /*!40000 ALTER TABLE `sub_specialties_clashing_groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -663,7 +689,7 @@ CREATE TABLE `sub_specialties_ot_types` (
   KEY `ix_sub_specialties_ot_types_id` (`id`),
   CONSTRAINT `sub_specialties_ot_types_ibfk_1` FOREIGN KEY (`ot_type_id`) REFERENCES `ot_type` (`id`),
   CONSTRAINT `sub_specialties_ot_types_ibfk_2` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -672,7 +698,7 @@ CREATE TABLE `sub_specialties_ot_types` (
 
 LOCK TABLES `sub_specialties_ot_types` WRITE;
 /*!40000 ALTER TABLE `sub_specialties_ot_types` DISABLE KEYS */;
-INSERT INTO `sub_specialties_ot_types` VALUES (1,1,2);
+INSERT INTO `sub_specialties_ot_types` VALUES (1,1,2),(2,2,1),(3,3,1),(4,4,1),(5,5,1),(6,6,1),(7,7,1),(8,8,1),(9,9,1),(10,10,1),(11,11,1),(12,11,1),(13,12,1),(14,13,1),(15,14,1),(16,14,1),(17,15,1),(18,16,1),(19,16,1),(20,17,1),(21,17,1),(22,18,1),(23,19,1),(24,20,1),(25,21,1),(26,22,1),(27,23,1),(28,24,1),(29,24,1),(30,25,1);
 /*!40000 ALTER TABLE `sub_specialties_ot_types` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -787,11 +813,13 @@ CREATE TABLE `user` (
   `first_name` varchar(255) NOT NULL,
   `last_name` varchar(255) NOT NULL,
   `is_active` tinyint(1) NOT NULL,
-  `role` enum('super admin','admin','user') NOT NULL,
+  `role_id` int NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
-  KEY `ix_user_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `role_id` (`role_id`),
+  KEY `ix_user_id` (`id`),
+  CONSTRAINT `user_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `role` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -800,7 +828,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` VALUES (1,'admin@gmail.com','$2b$12$I.2r0G8oLcijQQiE9okJ6.W56zcm4cTmMWXzGQeM7sflhd.8sidoe','admin','01',1,'admin'),(5,'user@gmail.com','$2b$12$mmV3Ky7b.kZydgOHFdauNu.w5/CH0MPh7qJi2QFSxuGO/PIDtHqai','user','01',1,'user');
+INSERT INTO `user` VALUES (1,'admin@gmail.com','$2b$12$jjQ0fdOrlcSJYu22N1fqku1EiNNtuGBV.jt1tlXbeRmaot4WyP026','admin','01',1,1);
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -841,4 +869,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-09-12  8:01:50
+-- Dump completed on 2024-09-13 21:10:25
