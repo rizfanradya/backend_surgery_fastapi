@@ -112,36 +112,36 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
         unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
         unit.fixed_ots = [
-            {'value': fot.ot_id, 'label': fot.ot_id}
+            {'value': fot.ot_id, 'label': str(fot.ot_id)}
             for fot in unit.fixed_ot
         ]
         unit.fixed_ot_opt = [
-            {'value': ot.id, 'label': ot.id}
+            {'value': ot.id, 'label': str(ot.id)}
             for ot in all_ots
         ]
 
         unit.blocked_ots = [
-            {'value': bot.ot_id, 'label': bot.ot_id}
+            {'value': bot.ot_id, 'label': str(bot.ot_id)}
             for bot in unit.blocked_ot
         ]
         unit.blocked_ot_opt = [
-            {'value': ot.id, 'label': ot.id}
+            {'value': ot.id, 'label': str(ot.id)}
             for ot in all_ots
         ]
 
         unit.preferred_ots = [
-            {'value': pot.ot_id, 'label': pot.ot_id}
+            {'value': pot.ot_id, 'label': str(pot.ot_id)}
             for pot in unit.preferred_ot
         ]
         unit.preferred_ot_opt = [
-            {'value': ot.id, 'label': ot.id}
+            {'value': ot.id, 'label': str(ot.id)}
             for ot in all_ots
         ]
 
         unit.blocked_days = [
             {
                 'value': bday.day_id,
-                'label': day_mapping.get(bday.day_id, 'Unknown')
+                'label': str(day_mapping.get(bday.day_id, 'Unknown'))
             }
             for bday in unit.blocked_day
         ]
@@ -153,7 +153,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
         unit.equipment_requirements = [
             {
                 'value': er_msp.equipment_id,
-                'label': er_msp_mapping.get(er_msp.equipment_id, 'Unknown')
+                'label': str(er_msp_mapping.get(er_msp.equipment_id, 'Unknown'))
             }
             for er_msp in unit.equipment_requirement
         ]
@@ -168,7 +168,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
         unit.sub_specialtys = [
             {
                 'value': ssp_id,
-                'label': sub_specialty_mapping.get(ssp_id, 'Unknown')
+                'label': str(sub_specialty_mapping.get(ssp_id, 'Unknown'))
             }
             for ssp_id in unique_sub_specialties
         ]

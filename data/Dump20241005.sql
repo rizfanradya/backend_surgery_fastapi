@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.38, for Win64 (x86_64)
 --
--- Host: localhost    Database: hctm_surgery
+-- Host: 89.116.20.146    Database: hctm_surgery
 -- ------------------------------------------------------
--- Server version	8.0.39
+-- Server version	9.0.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -34,7 +34,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('c8e5f6f072bd');
+INSERT INTO `alembic_version` VALUES ('acb618a0e953');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -568,18 +568,7 @@ CREATE TABLE `schedule_results` (
   `icu_start_time` time NOT NULL,
   `icu_end_time` time NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `icu_id` (`icu_id`),
-  KEY `ot_id` (`ot_id`),
-  KEY `pacu_id` (`pacu_id`),
-  KEY `phu_id` (`phu_id`),
-  KEY `post_op_id` (`post_op_id`),
-  KEY `week_id` (`week_id`),
-  KEY `ix_schedule_results_id` (`id`),
-  CONSTRAINT `schedule_results_ibfk_1` FOREIGN KEY (`pacu_id`) REFERENCES `ot_assignment` (`unit_id`),
-  CONSTRAINT `schedule_results_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot_assignment` (`ot_id`),
-  CONSTRAINT `schedule_results_ibfk_3` FOREIGN KEY (`phu_id`) REFERENCES `ot_assignment` (`unit_id`),
-  CONSTRAINT `schedule_results_ibfk_4` FOREIGN KEY (`post_op_id`) REFERENCES `ot_assignment` (`unit_id`),
-  CONSTRAINT `schedule_results_ibfk_5` FOREIGN KEY (`icu_id`) REFERENCES `ot_assignment` (`unit_id`)
+  KEY `ix_schedule_results_id` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -869,4 +858,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-09-13 21:10:25
+-- Dump completed on 2024-10-05 13:30:54
