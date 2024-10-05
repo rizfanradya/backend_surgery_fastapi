@@ -3,7 +3,6 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, Boolean, Time
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
-from .schedule_results import ScheduleResults
 
 
 class OtAssignment(Base):
@@ -23,28 +22,3 @@ class OtAssignment(Base):
     ot = relationship('Ot', back_populates='ot_assignment')
     unit = relationship('Unit', back_populates='ot_assignment')
     day = relationship('Day', back_populates='ot_assignment')
-    phu_schedule_results = relationship(
-        'ScheduleResults',
-        back_populates='phu',
-        foreign_keys=[ScheduleResults.phu_id]
-    )
-    post_op_schedule_results = relationship(
-        'ScheduleResults',
-        back_populates='post_op',
-        foreign_keys=[ScheduleResults.post_op_id]
-    )
-    pacu_schedule_results = relationship(
-        'ScheduleResults',
-        back_populates='pacu',
-        foreign_keys=[ScheduleResults.pacu_id]
-    )
-    icu_schedule_results = relationship(
-        'ScheduleResults',
-        back_populates='icu',
-        foreign_keys=[ScheduleResults.icu_id]
-    )
-    ot_schedule_results = relationship(
-        'ScheduleResults',
-        back_populates='ot',
-        foreign_keys=[ScheduleResults.ot_id]
-    )
