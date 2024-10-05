@@ -19,3 +19,4 @@ psycopg2
 bcrypt
 python-dotenv
 mysqlclient
+openpyxl
