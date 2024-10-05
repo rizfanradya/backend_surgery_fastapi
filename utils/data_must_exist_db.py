@@ -1,7 +1,6 @@
 from models.user import User
 from schemas.user import UserSchema
 from .database import SessionLocal
-from pydantic import EmailStr
 from .hashed_password import hashed_password
 from models.role import Role
 from schemas.role import RoleSchema
@@ -24,7 +23,7 @@ def data_that_must_exist_in_the_database():
         User.role_id == role_admin.id).first()
     if not user_admin:
         user_schema = UserSchema(
-            email=EmailStr('admin@gmail.com'),
+            email='admin@gmail.com',
             password=hashed_password('@Admin123'),
             first_name='admin',
             last_name='01',
