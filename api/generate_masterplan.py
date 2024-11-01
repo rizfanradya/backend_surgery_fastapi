@@ -8,7 +8,7 @@ from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from typing import Literal, Optional
-from sqlalchemy import asc, desc, func
+from sqlalchemy import asc, desc, func, text
 from io import BytesIO
 from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
@@ -238,10 +238,10 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             'Fixed ot type or equipment requirement status not found in database.'
         )
 
-    session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+    session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
     for table in truncate_tables:
-        session.execute(f'TRUNCATE TABLE {table}')
-    session.execute('SET FOREIGN_KEY_CHECKS = 1;')
+        session.execute(text(f'TRUNCATE TABLE {table}'))
+    session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
     session.commit()
 
     for constraint in ins_constraints.insConstraints:

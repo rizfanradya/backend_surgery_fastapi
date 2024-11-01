@@ -95,7 +95,7 @@ def generate_daily_schedule(
     if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
         send_error_response('Wrong file type, only accept xlsx')
     expected_headers = [
-        "BOOKING_DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
+        "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
         "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
         "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED",
     ]
