@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from utils.database import get_db
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.remove_orphaned_files import check_and_remove_orphaned_files
@@ -53,10 +54,10 @@ def truncate_master_tables(session: Session = Depends(get_db), token: str = Depe
             'surgery',
             'schedule_results',
         ]
-        session.execute('SET FOREIGN_KEY_CHECKS = 0;')
+        session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
         for table in truncate_tables:
-            session.execute(f'TRUNCATE TABLE {table}')
-        session.execute('SET FOREIGN_KEY_CHECKS = 1;')
+            session.execute(text(f'TRUNCATE TABLE {table}'))
+        session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
         session.commit()
         check_and_remove_orphaned_files()
         return {'message': 'Master tables truncated successfully'}
