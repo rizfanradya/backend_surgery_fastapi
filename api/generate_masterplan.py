@@ -13,6 +13,7 @@ from io import BytesIO
 from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
 import os
+import pytz
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
 from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema
 from schemas.fixed_ot import FixedOtSchema
@@ -405,7 +406,9 @@ def generate_masterplan(
         func.count(Objectives.id)
     ).one()
     average_weight_obj = total_weight / num_objectives if num_objectives > 0 else 0
-    current_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    wib_timezone = pytz.timezone("Asia/Jakarta")
+    current_timestamp = datetime.now(
+        wib_timezone).strftime('%Y-%m-%d %H:%M:%S')
     last_id = session.query(Masterplan).order_by(
         Masterplan.id.desc()).first()  # type: ignore
     get_last_id = last_id.id+1 if last_id else 1
