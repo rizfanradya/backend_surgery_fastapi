@@ -12,7 +12,7 @@ class WeekDataSchema(WeekSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetWeekResponseSchema(BaseModel):
@@ -20,4 +20,4 @@ class GetWeekResponseSchema(BaseModel):
     data: List[WeekDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

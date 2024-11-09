@@ -11,7 +11,7 @@ class PreferredOtDataSchema(PreferredOtSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetPreferredOtResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetPreferredOtResponseSchema(BaseModel):
     data: List[PreferredOtDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

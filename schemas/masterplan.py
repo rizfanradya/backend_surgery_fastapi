@@ -11,7 +11,7 @@ class MasterPlanDataSchema(MasterPlanSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetMasterPlanResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetMasterPlanResponseSchema(BaseModel):
     data: List[MasterPlanDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

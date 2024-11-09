@@ -12,7 +12,7 @@ class EquipmentDataSchema(EquipmentSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetEquipmentResponseSchema(BaseModel):
@@ -20,4 +20,4 @@ class GetEquipmentResponseSchema(BaseModel):
     data: List[EquipmentDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

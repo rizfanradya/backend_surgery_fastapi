@@ -11,7 +11,7 @@ class ProcedureNameDataSchema(ProcedureNameSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetProcedureNameResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetProcedureNameResponseSchema(BaseModel):
     data: List[ProcedureNameDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

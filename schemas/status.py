@@ -10,7 +10,7 @@ class StatusDataSchema(StatusSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetStatusResponseSchema(BaseModel):
@@ -18,4 +18,4 @@ class GetStatusResponseSchema(BaseModel):
     data: List[StatusDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

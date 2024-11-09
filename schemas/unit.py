@@ -16,7 +16,7 @@ class UnitDataSchema(UnitSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetUnitResponseSchema(BaseModel):
@@ -24,4 +24,4 @@ class GetUnitResponseSchema(BaseModel):
     data: List[UnitDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

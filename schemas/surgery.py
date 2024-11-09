@@ -18,7 +18,7 @@ class SurgeryDataSchema(SurgerySchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetSurgeryResponseSchema(BaseModel):
@@ -26,4 +26,4 @@ class GetSurgeryResponseSchema(BaseModel):
     data: List[SurgeryDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

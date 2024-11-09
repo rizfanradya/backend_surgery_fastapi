@@ -12,7 +12,7 @@ class SubSpecialtyDataSchema(SubSpecialtySchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetSubSpecialtyResponseSchema(BaseModel):
@@ -20,4 +20,4 @@ class GetSubSpecialtyResponseSchema(BaseModel):
     data: List[SubSpecialtyDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

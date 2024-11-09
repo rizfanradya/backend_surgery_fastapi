@@ -10,7 +10,7 @@ class SpecialtyDataSchema(SpecialtySchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetSpecialtyResponseSchema(BaseModel):
@@ -18,4 +18,4 @@ class GetSpecialtyResponseSchema(BaseModel):
     data: List[SpecialtyDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

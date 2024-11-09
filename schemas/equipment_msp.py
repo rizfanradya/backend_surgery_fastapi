@@ -12,7 +12,7 @@ class EquipmentMspDataSchema(EquipmentMspSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetEquipmentMspResponseSchema(BaseModel):
@@ -20,4 +20,4 @@ class GetEquipmentMspResponseSchema(BaseModel):
     data: List[EquipmentMspDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

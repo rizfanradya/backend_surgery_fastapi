@@ -11,7 +11,7 @@ class FixedOtDataSchema(FixedOtSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetFixedOtResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetFixedOtResponseSchema(BaseModel):
     data: List[FixedOtDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

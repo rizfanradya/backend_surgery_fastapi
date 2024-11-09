@@ -20,7 +20,7 @@ class UserDataSchema(BaseSchema):
     role: RoleDataSchema
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetUserResponseSchema(BaseModel):
@@ -28,4 +28,4 @@ class GetUserResponseSchema(BaseModel):
     data: List[UserDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

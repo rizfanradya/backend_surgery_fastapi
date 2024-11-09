@@ -11,7 +11,7 @@ class SubSpecialtiesClashingGroupsDataSchema(SubSpecialtiesClashingGroupsSchema)
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetSubSpecialtiesClashingGroupsResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetSubSpecialtiesClashingGroupsResponseSchema(BaseModel):
     data: List[SubSpecialtiesClashingGroupsDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

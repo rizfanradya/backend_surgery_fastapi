@@ -11,7 +11,7 @@ class BlockedOtDataSchema(BlockedOtSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetBlockedOtResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetBlockedOtResponseSchema(BaseModel):
     data: List[BlockedOtDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

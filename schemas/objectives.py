@@ -11,7 +11,7 @@ class ObjectivesDataSchema(ObjectivesSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetObjectivesResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetObjectivesResponseSchema(BaseModel):
     data: List[ObjectivesDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

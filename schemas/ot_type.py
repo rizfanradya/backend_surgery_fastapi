@@ -10,7 +10,7 @@ class OtTypeDataSchema(OtTypeSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetOtTypeResponseSchema(BaseModel):
@@ -18,4 +18,4 @@ class GetOtTypeResponseSchema(BaseModel):
     data: List[OtTypeDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -11,7 +11,7 @@ class SubSpecialtiesOtTypesDataSchema(SubSpecialtiesOtTypesSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetSubSpecialtiesOtTypesResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetSubSpecialtiesOtTypesResponseSchema(BaseModel):
     data: List[SubSpecialtiesOtTypesDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

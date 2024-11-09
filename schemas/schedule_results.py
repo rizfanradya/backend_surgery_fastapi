@@ -37,7 +37,7 @@ class ScheduleResultsDataSchema(ScheduleResultsSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetScheduleResultsResponseSchema(BaseModel):
@@ -45,4 +45,4 @@ class GetScheduleResultsResponseSchema(BaseModel):
     data: List[ScheduleResultsDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -11,7 +11,7 @@ class DayDataSchema(DaySchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetDayResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetDayResponseSchema(BaseModel):
     data: List[DayDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -11,7 +11,7 @@ class BlockedDayDataSchema(BlockedDaySchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetBlockedDayResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetBlockedDayResponseSchema(BaseModel):
     data: List[BlockedDayDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

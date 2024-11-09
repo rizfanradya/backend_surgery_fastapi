@@ -11,7 +11,7 @@ class EquipmentRequirementStatusDataSchema(EquipmentRequirementStatusSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetEquipmentRequirementStatusResponseSchema(BaseModel):
@@ -19,4 +19,4 @@ class GetEquipmentRequirementStatusResponseSchema(BaseModel):
     data: List[EquipmentRequirementStatusDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

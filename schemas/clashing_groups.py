@@ -10,7 +10,7 @@ class ClashingGroupsDataSchema(ClashingGroupsSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetClashingGroupsResponseSchema(BaseModel):
@@ -18,4 +18,4 @@ class GetClashingGroupsResponseSchema(BaseModel):
     data: List[ClashingGroupsDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

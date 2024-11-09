@@ -10,7 +10,7 @@ class RoleDataSchema(RoleSchema):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class GetRoleResponseSchema(BaseModel):
@@ -18,4 +18,4 @@ class GetRoleResponseSchema(BaseModel):
     data: List[RoleDataSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

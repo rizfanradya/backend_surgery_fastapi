@@ -16,7 +16,7 @@ class ObjectiveResponseSchema(ObjectivesItemBaseSchema):
     objectives: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OtItemBaseSchema(BaseModel):
@@ -49,7 +49,7 @@ class UnitBaseSchema(BaseModel):
     sub_specialty_opt: List[UnitItemBaseSchema]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ConstraintsBaseSchema(BaseModel):
@@ -61,7 +61,7 @@ class ConstraintsResponseSchema(BaseModel):
     data: ConstraintsBaseSchema
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class InsertConstraintsBaseSchema(BaseModel):
