@@ -8,7 +8,7 @@ from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from utils.parse_date import parse_date
 from utils.add_duration import add_duration
 from datetime import date as dt_datetime, datetime, time
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 from sqlalchemy import func
@@ -20,6 +20,7 @@ from models.schedule_results import ScheduleResults
 from models.ot import Ot
 from models.sub_specialty import SubSpecialty
 from models.unit import Unit
+from models.procedure_name import ProcedureName
 
 router = APIRouter()
 
@@ -92,6 +93,7 @@ def generate_daily_schedule(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    check_excell_format(file, session, token)
     if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
         send_error_response('Wrong file type, only accept xlsx')
     expected_headers = [
@@ -151,6 +153,11 @@ def generate_daily_schedule(
         ot_end_time = add_duration(str(ot_start_time), duration)
         ot_start_time_map[day_key] = ot_end_time
 
+        procedure_name = row[10]
+        if isinstance(procedure_name, str) and "-" in procedure_name:
+            procedure_name = procedure_name.split("-", 1)[-1].strip()
+        procedure_name = f"PROCEDURE - {procedure_name}"
+
         schedule_results_schema = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
@@ -161,7 +168,7 @@ def generate_daily_schedule(
             type_of_surgery=str(row[7]),
             sub_specialty_desc=str(row[8]),
             specialty_id=str(row[9]),
-            procedure_name=str(row[10]),
+            procedure_name=procedure_name,
             surgery_duration=duration,
             phu_id=ot_assignment.unit_id,
             phu_start_time=ot_start_time,
@@ -244,5 +251,69 @@ def export_schedule_results(run_id: str, session: Session = Depends(get_db), tok
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.post('/validity')
+def check_excell_format(file: UploadFile = File(...), session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
+        send_error_response('Wrong file type, only accept xlsx')
+    expected_headers = [
+        "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
+        "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
+        "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED",
+    ]
+    contents = file.file.read()
+    excel_data = BytesIO(contents)
+    workbook = load_workbook(excel_data)
+    sheet = workbook.active
+    actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
+    for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
+        if expected != actual:
+            send_error_response(
+                f"Column {idx}: Expected '{expected}', found '{actual}'"
+            )
+    procedure_names = {p.name for p in session.query(ProcedureName).all()}
+    unit_names = {u.name for u in session.query(Unit).all()}
+    for row_idx, row in enumerate(
+        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
+        start=2
+    ):
+        procedure_name = str(row[10])
+        subspeciality_desc = str(row[8])
+        if "-" in procedure_name:
+            procedure_name = procedure_name.split("-", 1)[-1].strip()
+        procedure_name = f"PROCEDURE - {procedure_name}"
+
+        if procedure_name not in procedure_names:
+            send_error_response(
+                f'{procedure_name} in column PROCEDURE NAME and in row {row_idx} not found in database.')
+        # if subspeciality_desc not in unit_names:
+        #     send_error_response(
+        #         f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
+    file.file.seek(0)
+    return {'message': 'Excel file is valid with correct headers and data matching the database.'}
+
+
+@router.get('/template')
+def download_template(token: str = Depends(TokenAuthorization)):
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "template"  # type: ignore
+    headers = [
+        "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
+        "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
+        "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED",
+    ]
+    for col_num, header in enumerate(headers, 1):
+        sheet.cell(row=1, column=col_num, value=header)  # type: ignore
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    filename = datetime.now().strftime(f'dailyschedule_format_%Y-%B-%d_%H:%M:%S.xlsx')
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
