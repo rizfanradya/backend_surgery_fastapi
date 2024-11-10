@@ -118,6 +118,9 @@ def generate_daily_schedule(
     if master_plan is None:
         send_error_response('Master plan not found')
 
+    start_date_str = parse_date(start_date)
+    end_date_str = parse_date(end_date)
+
     ot_start_time_map: Dict[str, time] = {}
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
@@ -129,6 +132,9 @@ def generate_daily_schedule(
             send_error_response(
                 f"Invalid date format for booking date: {error}"
             )
+
+        if booking_date < start_date_str or booking_date > end_date_str:
+            continue
 
         try:
             age = int(str(row[2]))
@@ -202,27 +208,30 @@ def generate_daily_schedule(
 
 @router.get('/run_id')
 def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    subquery = (
-        session.query(
-            ScheduleResults.run_id,
-            func.min(ScheduleResults.id).label('min_id')
+    try:
+        subquery = (
+            session.query(
+                ScheduleResults.run_id,
+                func.min(ScheduleResults.id).label('min_id')
+            )
+            .group_by(ScheduleResults.run_id)  # type: ignore
+            .order_by(func.min(ScheduleResults.id))
+            .subquery()
         )
-        .group_by(ScheduleResults.run_id)  # type: ignore
-        .order_by(func.min(ScheduleResults.id))
-        .subquery()
-    )
-    total_query = session.query(func.count(subquery.c.run_id)).scalar()
-    data_query = (
-        session.query(subquery.c.run_id)
-        .order_by(subquery.c.min_id)  # type: ignore
-        .limit(limit)
-        .offset(offset)
-    )
-    data = data_query.all()
-    return {
-        "total": total_query,
-        "data": data
-    }
+        total_query = session.query(func.count(subquery.c.run_id)).scalar()
+        data_query = (
+            session.query(subquery.c.run_id)
+            .order_by(subquery.c.min_id)  # type: ignore
+            .limit(limit)
+            .offset(offset)
+        )
+        data = [{"run_id": row.run_id} for row in data_query.all()]
+        return {
+            "total": total_query,
+            "data": data
+        }
+    except Exception as error:
+        send_error_response(str(error), 'Failed get run ids')
 
 
 @router.get('/export')
