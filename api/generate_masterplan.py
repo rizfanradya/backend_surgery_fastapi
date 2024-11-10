@@ -113,7 +113,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             # sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
             #     SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
             sub_specialty_clashing_groups = [
-                clashing_group.id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
+                clashing_group.sub_specialty_id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
                     SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id
                 ).all()
             ]
@@ -554,6 +554,10 @@ def generate_masterplan(
             session.refresh(new_surgery)
             session.refresh(new_ot_assignment)
         except Exception as error:
+            otAssignmentData = session.query(OtAssignment).where(
+                OtAssignment.mssp_id == new_masterplan.id).all()
+            for obj in otAssignmentData:
+                session.delete(obj)
             send_error_response(str(error), 'Cannot create master plan')
 
     new_masterplan.id
@@ -588,6 +592,7 @@ def otassignment(
 
     ot_assignment = ot_assignment.all()
     ot_assignments_map = {}
+    week_ids = set()
 
     for assignment in ot_assignment:
         ot_id = assignment.ot_id
@@ -600,6 +605,7 @@ def otassignment(
             "time": f"{assignment.opening_time} - {assignment.closing_time}",
             "color_hex": assignment.unit.color_hex
         }
+        week_ids.add(assignment.week_id)
 
     all_ot_ids = session.query(Ot.id).all()
     all_ot_ids = [ot_id[0] for ot_id in all_ot_ids]
@@ -613,7 +619,7 @@ def otassignment(
         })
 
     grouped_data.sort(key=lambda x: x["ot_id"])
-    weeks = session.query(Week).all()
+    weeks = session.query(Week).filter(Week.id.in_(week_ids)).all()
 
     return {
         "otassignment": grouped_data,

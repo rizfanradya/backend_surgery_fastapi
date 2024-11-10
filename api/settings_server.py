@@ -63,3 +63,26 @@ def truncate_master_tables(session: Session = Depends(get_db), token: str = Depe
         return {'message': 'Master tables truncated successfully'}
     except Exception as error:
         return send_error_response(str(error))
+
+
+@router.get('/truncate_constraints')
+def truncate_constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    try:
+        truncate_tables = [
+            'blocked_day',
+            'blocked_ot',
+            'fixed_ot',
+            'preferred_ot',
+            'sub_specialties_clashing_groups',
+            'equipment_requirement',
+            'clashing_groups',
+        ]
+        session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
+        for table in truncate_tables:
+            session.execute(text(f'TRUNCATE TABLE {table}'))
+        session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+        session.commit()
+        check_and_remove_orphaned_files()
+        return {'message': 'Constraints tables truncated successfully'}
+    except Exception as error:
+        return send_error_response(str(error))
