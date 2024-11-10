@@ -87,103 +87,113 @@ def masterplan(
 
 @router.get('/constraints', response_model=ConstraintsResponseSchema)
 def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    all_ots = session.query(Ot).all()
-    all_days = session.query(Day).order_by(Day.id).all()  # type: ignore
-    all_equipment_msp = session.query(EquipmentMsp).all()
-    all_sub_specialty = session.query(SubSpecialty).all()
-    objectives = session.query(Objectives).order_by(
-        Objectives.id).all()  # type: ignore
-    units = session.query(Unit).options(
-        joinedload(Unit.fixed_ot),
-        joinedload(Unit.blocked_ot),
-        joinedload(Unit.preferred_ot),
-        joinedload(Unit.blocked_day),
-        joinedload(Unit.equipment_requirement),
-    ).order_by(Unit.id).all()  # type: ignore
+    try:
+        all_ots = session.query(Ot).all()
+        all_days = session.query(Day).order_by(Day.id).all()  # type: ignore
+        all_equipment_msp = session.query(EquipmentMsp).all()
+        all_sub_specialty = session.query(SubSpecialty).all()
+        objectives = session.query(Objectives).order_by(
+            Objectives.id).all()  # type: ignore
+        units = session.query(Unit).options(
+            joinedload(Unit.fixed_ot),
+            joinedload(Unit.blocked_ot),
+            joinedload(Unit.preferred_ot),
+            joinedload(Unit.blocked_day),
+            joinedload(Unit.equipment_requirement),
+        ).order_by(Unit.id).all()  # type: ignore
 
-    day_mapping = {day.id: day.name for day in all_days}
-    er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
-    sub_specialty_mapping = {
-        ssp.id: ssp.description for ssp in all_sub_specialty
-    }
-    for unit in units:
-        sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
-            SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
-        sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
-            SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
-        unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
-        unit.fixed_ots = [
-            {'value': fot.ot_id, 'label': str(fot.ot_id)}
-            for fot in unit.fixed_ot
-        ]
-        unit.fixed_ot_opt = [
-            {'value': ot.id, 'label': str(ot.id)}
-            for ot in all_ots
-        ]
-
-        unit.blocked_ots = [
-            {'value': bot.ot_id, 'label': str(bot.ot_id)}
-            for bot in unit.blocked_ot
-        ]
-        unit.blocked_ot_opt = [
-            {'value': ot.id, 'label': str(ot.id)}
-            for ot in all_ots
-        ]
-
-        unit.preferred_ots = [
-            {'value': pot.ot_id, 'label': str(pot.ot_id)}
-            for pot in unit.preferred_ot
-        ]
-        unit.preferred_ot_opt = [
-            {'value': ot.id, 'label': str(ot.id)}
-            for ot in all_ots
-        ]
-
-        unit.blocked_days = [
-            {
-                'value': bday.day_id,
-                'label': str(day_mapping.get(bday.day_id, 'Unknown'))
-            }
-            for bday in unit.blocked_day
-        ]
-        unit.blocked_day_opt = [
-            {'value': day.id, 'label': day.name}
-            for day in all_days
-        ]
-
-        unit.equipment_requirements = [
-            {
-                'value': er_msp.equipment_id,
-                'label': str(er_msp_mapping.get(er_msp.equipment_id, 'Unknown'))
-            }
-            for er_msp in unit.equipment_requirement
-        ]
-        unit.equipment_requirement_opt = [
-            {'value': equipment_msp.id, 'label': equipment_msp.name}
-            for equipment_msp in all_equipment_msp
-        ]
-
-        unique_sub_specialties = set()
-        for sscg in sub_specialty_clashing_groups:
-            unique_sub_specialties.add(sscg.sub_specialty_id)
-        unit.sub_specialtys = [
-            {
-                'value': ssp_id,
-                'label': str(sub_specialty_mapping.get(ssp_id, 'Unknown'))
-            }
-            for ssp_id in unique_sub_specialties
-        ]
-        unit.sub_specialty_opt = [
-            {'value': ssp.id, 'label': ssp.description}
-            for ssp in all_sub_specialty
-        ]
-
-    return {
-        'data': {
-            'constraints': units,
-            'objective': objectives
+        day_mapping = {day.id: day.name for day in all_days}
+        er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
+        sub_specialty_mapping = {
+            ssp.id: ssp.description for ssp in all_sub_specialty
         }
-    }
+        for unit in units:
+            sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
+                SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
+            # sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
+            #     SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
+            sub_specialty_clashing_groups = [
+                clashing_group.id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
+                    SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id
+                ).all()
+            ]
+
+            unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
+            unit.fixed_ots = [
+                {'value': fot.ot_id, 'label': str(fot.ot_id)}
+                for fot in unit.fixed_ot
+            ]
+            unit.fixed_ot_opt = [
+                {'value': ot.id, 'label': str(ot.id)}
+                for ot in all_ots
+            ]
+
+            unit.blocked_ots = [
+                {'value': bot.ot_id, 'label': str(bot.ot_id)}
+                for bot in unit.blocked_ot
+            ]
+            unit.blocked_ot_opt = [
+                {'value': ot.id, 'label': str(ot.id)}
+                for ot in all_ots
+            ]
+
+            unit.preferred_ots = [
+                {'value': pot.ot_id, 'label': str(pot.ot_id)}
+                for pot in unit.preferred_ot
+            ]
+            unit.preferred_ot_opt = [
+                {'value': ot.id, 'label': str(ot.id)}
+                for ot in all_ots
+            ]
+
+            unit.blocked_days = [
+                {
+                    'value': bday.day_id,
+                    'label': str(day_mapping.get(bday.day_id, 'Unknown'))
+                }
+                for bday in unit.blocked_day
+            ]
+            unit.blocked_day_opt = [
+                {'value': day.id, 'label': day.name}
+                for day in all_days
+            ]
+
+            unit.equipment_requirements = [
+                {
+                    'value': er_msp.equipment_id,
+                    'label': str(er_msp_mapping.get(er_msp.equipment_id, 'Unknown'))
+                }
+                for er_msp in unit.equipment_requirement
+            ]
+            unit.equipment_requirement_opt = [
+                {'value': equipment_msp.id, 'label': equipment_msp.name}
+                for equipment_msp in all_equipment_msp
+            ]
+
+            # unique_sub_specialties = set()
+            # for sscg in sub_specialty_clashing_groups:
+            #     unique_sub_specialties.add(sscg.sub_specialty_id)
+            unit.sub_specialtys = [
+                {
+                    'value': ssp_id,
+                    'label': str(sub_specialty_mapping.get(ssp_id, 'Unknown'))
+                }
+                for ssp_id in sub_specialty_clashing_groups
+            ]
+            unit.sub_specialty_opt = [
+                {'value': ssp.id, 'label': ssp.description}
+                for ssp in all_sub_specialty
+            ]
+
+        return {
+            'data': {
+                'constraints': units,
+                'objective': objectives
+            }
+        }
+    except Exception as error:
+        send_error_response(
+            str(error), 'Failed to get data Constraints or Objectives')
 
 
 @router.post('/objectives')
@@ -396,7 +406,6 @@ def generate_masterplan(
     token: str = Depends(TokenAuthorization)
 ):
     check_excell_format(file, session, token)
-    file.file.seek(0)
 
     start_date_str = parse_date(start_date)
     end_date_str = parse_date(end_date)
@@ -489,7 +498,12 @@ def generate_masterplan(
         except ValueError as error:
             send_error_response(f"Invalid duration format: {error}")
 
-        procedure_name_id = procedure_name_map.get(row[13], 0)
+        procedure_name = row[13]
+        if isinstance(procedure_name, str) and "-" in procedure_name:
+            procedure_name = procedure_name.split("-", 1)[-1].strip()
+        procedure_name = f"PROCEDURE - {procedure_name}"
+        procedure_name_id = procedure_name_map.get(procedure_name, 0)
+
         unit_id = unit_name_map.get(row[10], 0)
         ot_id = ot_name_map.get(str(row[12]), 0)
         day_id = map_day_of_week_to_day_id(str(operation_date), session)
@@ -498,44 +512,49 @@ def generate_masterplan(
             continue
         if day_id == 0:
             continue
+        if unit_id == 0:
+            continue
 
         for sub_specialty_id, clashing_ids in clashing_group_map.items():
             if unit_id in clashing_ids:
                 send_error_response(
                     f"Clashing detected for subspecialty {sub_specialty_id} with unit {unit_id}")
 
-        surgery_schema = SurgerySchema(
-            mrn=str(row[2]),
-            unit_id=unit_id,
-            booking_date=booking_date,
-            estimated_duration=duration,
-            procedure_name_id=procedure_name_id,
-            age=age,
-            gender_code='P' if isinstance(
-                row[4], str) and row[4].upper() == 'P' else 'L',
-            surgeon=str(row[16])
-        )
-        ot_assignment_schema = OtAssignmentSchema(
-            mssp_id=new_masterplan.id,
-            week_id=1,
-            ot_id=ot_id,
-            unit_id=unit_id,
-            day_id=day_id,
-            is_require_anaes=True if row[8] == 'Y'else False,
-            opening_time=datetime.strptime(
-                '09:00:00.0000', '%H:%M:%S.%f').time(),
-            closing_time=datetime.strptime(
-                '16:00:00.0000', '%H:%M:%S.%f').time()
-        )
+        try:
+            surgery_schema = SurgerySchema(
+                mrn=str(row[2]),
+                unit_id=unit_id,
+                booking_date=booking_date,
+                estimated_duration=duration,
+                procedure_name_id=procedure_name_id,
+                age=age,
+                gender_code='P' if isinstance(
+                    row[4], str) and row[4].upper() == 'P' else 'L',
+                surgeon=str(row[16])
+            )
+            ot_assignment_schema = OtAssignmentSchema(
+                mssp_id=new_masterplan.id,
+                week_id=1,
+                ot_id=ot_id,
+                unit_id=unit_id,
+                day_id=day_id,
+                is_require_anaes=True if row[8] == 'Y'else False,
+                opening_time=datetime.strptime(
+                    '09:00:00.0000', '%H:%M:%S.%f').time(),
+                closing_time=datetime.strptime(
+                    '16:00:00.0000', '%H:%M:%S.%f').time()
+            )
 
-        new_surgery = Surgery(**surgery_schema.dict())
-        new_ot_assignment = OtAssignment(**ot_assignment_schema.dict())
-        session.add(new_surgery)
-        session.add(new_ot_assignment)
-        session.commit()
-        session.commit()
-        session.refresh(new_surgery)
-        session.refresh(new_ot_assignment)
+            new_surgery = Surgery(**surgery_schema.dict())
+            new_ot_assignment = OtAssignment(**ot_assignment_schema.dict())
+            session.add(new_surgery)
+            session.add(new_ot_assignment)
+            session.commit()
+            session.commit()
+            session.refresh(new_surgery)
+            session.refresh(new_ot_assignment)
+        except Exception as error:
+            send_error_response(str(error), 'Cannot create master plan')
 
     new_masterplan.id
     return new_masterplan
@@ -632,15 +651,20 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         procedure_name = str(row[13])
         ot_list_name = str(row[12])
         subspeciality_desc = str(row[10])
+        if "-" in procedure_name:
+            procedure_name = procedure_name.split("-", 1)[-1].strip()
+        procedure_name = f"PROCEDURE - {procedure_name}"
+
         if procedure_name not in procedure_names:
             send_error_response(
                 f'{procedure_name} in column PROCEDURE NAME and in row {row_idx} not found in database.')
         if ot_list_name not in ot_names:
             send_error_response(
                 f'{ot_list_name} in column OT LIST NAME and in row {row_idx} not found in database.')
-        if subspeciality_desc not in unit_names:
-            send_error_response(
-                f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
+        # if subspeciality_desc not in unit_names:
+        #     send_error_response(
+        #         f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
+    file.file.seek(0)
     return {'message': 'Excel file is valid with correct headers and data matching the database.'}
 
 
