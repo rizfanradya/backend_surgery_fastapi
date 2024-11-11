@@ -133,8 +133,8 @@ def generate_daily_schedule(
                 f"Invalid date format for booking date: {error}"
             )
 
-        if booking_date < start_date_str or booking_date > end_date_str:
-            continue
+        # if booking_date < start_date_str or booking_date > end_date_str:
+        #     continue
 
         try:
             age = int(str(row[2]))
