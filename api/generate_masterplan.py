@@ -12,6 +12,7 @@ from sqlalchemy import asc, desc, func, text
 from io import BytesIO
 from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
+from collections import defaultdict
 import os
 import pytz
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
@@ -499,12 +500,13 @@ def generate_masterplan(
             send_error_response(f"Invalid duration format: {error}")
 
         procedure_name = row[13]
+        subspeciality_desc = row[10]
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
         procedure_name_id = procedure_name_map.get(procedure_name, 0)
 
-        unit_id = unit_name_map.get(row[10], 0)
+        unit_id = unit_name_map.get(subspeciality_desc, 0)
         ot_id = ot_name_map.get(str(row[12]), 0)
         day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
@@ -514,6 +516,22 @@ def generate_masterplan(
             continue
         if unit_id == 0:
             continue
+
+        query_ot_and_day = session.query(OtAssignment).where(
+            OtAssignment.mssp_id == new_masterplan.id,
+            OtAssignment.ot_id == ot_id,
+            OtAssignment.day_id == day_id
+        ).first()
+        if query_ot_and_day is not None:
+            ot_assignment_data = session.query(OtAssignment).where(
+                OtAssignment.mssp_id == new_masterplan.id).all()
+            masterplan_data = session.query(Masterplan).get(new_masterplan.id)
+            for obj in ot_assignment_data:
+                session.delete(obj)
+            session.delete(masterplan_data)
+            session.commit()
+            send_error_response(
+                f"Clashing detected on row {row_idx}: Subspecialty with unit {subspeciality_desc} and Procedure Name {procedure_name} conflicts with another entry on the same OT and DAY.")
 
         for sub_specialty_id, clashing_ids in clashing_group_map.items():
             if unit_id in clashing_ids:
@@ -550,14 +568,16 @@ def generate_masterplan(
             session.add(new_surgery)
             session.add(new_ot_assignment)
             session.commit()
-            session.commit()
             session.refresh(new_surgery)
             session.refresh(new_ot_assignment)
         except Exception as error:
-            otAssignmentData = session.query(OtAssignment).where(
+            ot_assignment_data = session.query(OtAssignment).where(
                 OtAssignment.mssp_id == new_masterplan.id).all()
-            for obj in otAssignmentData:
+            masterplan_data = session.query(Masterplan).get(new_masterplan.id)
+            for obj in ot_assignment_data:
                 session.delete(obj)
+            session.delete(masterplan_data)
+            session.commit()
             send_error_response(str(error), 'Cannot create master plan')
 
     new_masterplan.id
@@ -632,16 +652,21 @@ def otassignment(
 def check_excell_format(file: UploadFile = File(...), session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
         send_error_response('Wrong file type, only accept xlsx')
+
     expected_headers = [
         "BOOKING DATE", "OPERATION DATE", "MRN", "AGE", "GENDER CODE", "DIAGNOSIS", "COMMENT",
         "ANAES TYPE", "ANAES ID", "TYPE OF OPERATION", "SUBSPECIALITY DESC", "SPECIALITY ID",
         "OT LIST NAME", "PROCEDURE NAME", "DURATION", "BOOKED BY", "SURGEON"
     ]
+
     contents = file.file.read()
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
     actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
+    seen_combinations = defaultdict(list)
+    duplicate_entries = []
+
     for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
         if expected != actual:
             send_error_response(
@@ -650,6 +675,7 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
     procedure_names = {p.name for p in session.query(ProcedureName).all()}
     ot_names = {o.name for o in session.query(Ot).all()}
     unit_names = {u.name for u in session.query(Unit).all()}
+
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
@@ -657,6 +683,9 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         procedure_name = str(row[13])
         ot_list_name = str(row[12])
         subspeciality_desc = str(row[10])
+        operation_date = parse_date(row[1])
+        day_id = map_day_of_week_to_day_id(str(operation_date), session)
+
         if "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
@@ -664,12 +693,27 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         if procedure_name not in procedure_names:
             send_error_response(
                 f'{procedure_name} in column PROCEDURE NAME and in row {row_idx} not found in database.')
+
         if ot_list_name not in ot_names:
             send_error_response(
                 f'{ot_list_name} in column OT LIST NAME and in row {row_idx} not found in database.')
+
         # if subspeciality_desc not in unit_names:
         #     send_error_response(
         #         f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
+
+        day_ot_key = (day_id, ot_list_name)
+        seen_combinations[day_ot_key].append(row_idx)
+
+    duplicate_rows = [
+        rows for rows in seen_combinations.values() if len(rows) > 1]
+    if duplicate_rows:
+        duplicate_row_str = ', '.join(
+            f"({', '.join(map(str, rows))})" for rows in duplicate_rows)
+        error_message = f"Duplicate entries with the same Day and OT have been found in the following rows: {
+            duplicate_row_str}"
+        send_error_response(error_message)
+
     file.file.seek(0)
     return {'message': 'Excel file is valid with correct headers and data matching the database.'}
 
