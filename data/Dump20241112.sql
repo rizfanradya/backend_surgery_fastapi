@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.38, for Win64 (x86_64)
 --
--- Host: 89.116.20.146    Database: hctm_surgery
+-- Host: localhost    Database: hctm_surgery
 -- ------------------------------------------------------
--- Server version	9.0.1
+-- Server version	8.0.39
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -34,7 +34,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('acb618a0e953');
+INSERT INTO `alembic_version` VALUES ('e2b9aafe0c9b');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -55,7 +55,7 @@ CREATE TABLE `blocked_day` (
   KEY `ix_blocked_day_id` (`id`),
   CONSTRAINT `blocked_day_ibfk_1` FOREIGN KEY (`day_id`) REFERENCES `day` (`id`),
   CONSTRAINT `blocked_day_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -64,7 +64,6 @@ CREATE TABLE `blocked_day` (
 
 LOCK TABLES `blocked_day` WRITE;
 /*!40000 ALTER TABLE `blocked_day` DISABLE KEYS */;
-INSERT INTO `blocked_day` VALUES (1,1,1);
 /*!40000 ALTER TABLE `blocked_day` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -85,7 +84,7 @@ CREATE TABLE `blocked_ot` (
   KEY `ix_blocked_ot_id` (`id`),
   CONSTRAINT `blocked_ot_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `blocked_ot_ibfk_2` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -94,7 +93,6 @@ CREATE TABLE `blocked_ot` (
 
 LOCK TABLES `blocked_ot` WRITE;
 /*!40000 ALTER TABLE `blocked_ot` DISABLE KEYS */;
-INSERT INTO `blocked_ot` VALUES (1,2,1);
 /*!40000 ALTER TABLE `blocked_ot` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -110,7 +108,7 @@ CREATE TABLE `clashing_groups` (
   `description` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_clashing_groups_id` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -119,7 +117,6 @@ CREATE TABLE `clashing_groups` (
 
 LOCK TABLES `clashing_groups` WRITE;
 /*!40000 ALTER TABLE `clashing_groups` DISABLE KEYS */;
-INSERT INTO `clashing_groups` VALUES (1,'Clashing Group: 1 and 1'),(2,'Clashing Group: 2 and 2');
 /*!40000 ALTER TABLE `clashing_groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -229,7 +226,7 @@ CREATE TABLE `equipment_requirement` (
   CONSTRAINT `equipment_requirement_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
   CONSTRAINT `equipment_requirement_ibfk_2` FOREIGN KEY (`equipment_requirement_status_id`) REFERENCES `equipment_requirement_status` (`id`),
   CONSTRAINT `equipment_requirement_ibfk_3` FOREIGN KEY (`equipment_id`) REFERENCES `equipment` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -238,7 +235,6 @@ CREATE TABLE `equipment_requirement` (
 
 LOCK TABLES `equipment_requirement` WRITE;
 /*!40000 ALTER TABLE `equipment_requirement` DISABLE KEYS */;
-INSERT INTO `equipment_requirement` VALUES (1,1,1,3);
 /*!40000 ALTER TABLE `equipment_requirement` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -408,8 +404,7 @@ CREATE TABLE `ot_assignment` (
   CONSTRAINT `ot_assignment_ibfk_1` FOREIGN KEY (`day_id`) REFERENCES `day` (`id`),
   CONSTRAINT `ot_assignment_ibfk_2` FOREIGN KEY (`mssp_id`) REFERENCES `masterplan` (`id`),
   CONSTRAINT `ot_assignment_ibfk_3` FOREIGN KEY (`week_id`) REFERENCES `week` (`id`),
-  CONSTRAINT `ot_assignment_ibfk_4` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
-  CONSTRAINT `ot_assignment_ibfk_5` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
+  CONSTRAINT `ot_assignment_ibfk_4` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -464,7 +459,7 @@ CREATE TABLE `preferred_ot` (
   KEY `ix_preferred_ot_id` (`id`),
   CONSTRAINT `preferred_ot_ibfk_1` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`),
   CONSTRAINT `preferred_ot_ibfk_2` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -473,7 +468,6 @@ CREATE TABLE `preferred_ot` (
 
 LOCK TABLES `preferred_ot` WRITE;
 /*!40000 ALTER TABLE `preferred_ot` DISABLE KEYS */;
-INSERT INTO `preferred_ot` VALUES (1,1,1);
 /*!40000 ALTER TABLE `preferred_ot` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -648,7 +642,7 @@ CREATE TABLE `sub_specialties_clashing_groups` (
   KEY `ix_sub_specialties_clashing_groups_id` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_1` FOREIGN KEY (`clashing_group_id`) REFERENCES `clashing_groups` (`id`),
   CONSTRAINT `sub_specialties_clashing_groups_ibfk_2` FOREIGN KEY (`sub_specialty_id`) REFERENCES `sub_specialty` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -657,7 +651,6 @@ CREATE TABLE `sub_specialties_clashing_groups` (
 
 LOCK TABLES `sub_specialties_clashing_groups` WRITE;
 /*!40000 ALTER TABLE `sub_specialties_clashing_groups` DISABLE KEYS */;
-INSERT INTO `sub_specialties_clashing_groups` VALUES (1,1,1),(2,1,1),(3,2,2),(4,2,2);
 /*!40000 ALTER TABLE `sub_specialties_clashing_groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -858,4 +851,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-10-05 13:30:54
+-- Dump completed on 2024-11-12 14:53:33
