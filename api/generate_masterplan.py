@@ -469,6 +469,8 @@ def generate_masterplan(
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
+    surgeries = []
+    ot_assignments = []
 
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
@@ -479,9 +481,6 @@ def generate_masterplan(
         except ValueError as error:
             send_error_response(
                 f"Invalid date format for booking date: {error}")
-
-        # if booking_date < start_date_str or booking_date > end_date_str:
-        #     continue
 
         try:
             operation_date = parse_date(row[1])
@@ -510,11 +509,7 @@ def generate_masterplan(
         ot_id = ot_name_map.get(str(row[12]), 0)
         day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
-        if ot_id == 0:
-            continue
-        if day_id == 0:
-            continue
-        if unit_id == 0:
+        if ot_id == 0 or day_id == 0 or unit_id == 0:
             continue
 
         query_ot_and_day = session.query(OtAssignment).where(
@@ -523,12 +518,7 @@ def generate_masterplan(
             OtAssignment.day_id == day_id
         ).first()
         if query_ot_and_day is not None:
-            ot_assignment_data = session.query(OtAssignment).where(
-                OtAssignment.mssp_id == new_masterplan.id).all()
-            masterplan_data = session.query(Masterplan).get(new_masterplan.id)
-            for obj in ot_assignment_data:
-                session.delete(obj)
-            session.delete(masterplan_data)
+            session.rollback()
             session.commit()
             send_error_response(
                 f"Clashing detected on row {row_idx}: Subspecialty with unit {subspeciality_desc} and Procedure Name {procedure_name} conflicts with another entry on the same OT and DAY.")
@@ -538,50 +528,42 @@ def generate_masterplan(
                 send_error_response(
                     f"Clashing detected for subspecialty {sub_specialty_id} with unit {unit_id}")
 
-        try:
-            surgery_schema = SurgerySchema(
-                mrn=str(row[2]),
-                unit_id=unit_id,
-                booking_date=booking_date,
-                estimated_duration=duration,
-                procedure_name_id=procedure_name_id,
-                age=age,
-                gender_code='P' if isinstance(
-                    row[4], str) and row[4].upper() == 'P' else 'L',
-                surgeon=str(row[16])
-            )
-            ot_assignment_schema = OtAssignmentSchema(
-                mssp_id=new_masterplan.id,
-                week_id=1,
-                ot_id=ot_id,
-                unit_id=unit_id,
-                day_id=day_id,
-                is_require_anaes=True if row[8] == 'Y'else False,
-                opening_time=datetime.strptime(
-                    '09:00:00.0000', '%H:%M:%S.%f').time(),
-                closing_time=datetime.strptime(
-                    '16:00:00.0000', '%H:%M:%S.%f').time()
-            )
+        surgery_schema = SurgerySchema(
+            mrn=str(row[2]),
+            unit_id=unit_id,
+            booking_date=booking_date,
+            estimated_duration=duration,
+            procedure_name_id=procedure_name_id,
+            age=age,
+            gender_code='P' if isinstance(
+                row[4], str) and row[4].upper() == 'P' else 'L',
+            surgeon=str(row[16])
+        )
+        ot_assignment_schema = OtAssignmentSchema(
+            mssp_id=new_masterplan.id,
+            week_id=1,
+            ot_id=ot_id,
+            unit_id=unit_id,
+            day_id=day_id,
+            is_require_anaes=True if row[8] == 'Y'else False,
+            opening_time=datetime.strptime(
+                '09:00:00.0000', '%H:%M:%S.%f').time(),
+            closing_time=datetime.strptime(
+                '16:00:00.0000', '%H:%M:%S.%f').time()
+        )
+        surgeries.append(Surgery(**surgery_schema.dict()))
+        ot_assignments.append(OtAssignment(**ot_assignment_schema.dict()))
 
-            new_surgery = Surgery(**surgery_schema.dict())
-            new_ot_assignment = OtAssignment(**ot_assignment_schema.dict())
-            session.add(new_surgery)
-            session.add(new_ot_assignment)
-            session.commit()
-            session.refresh(new_surgery)
-            session.refresh(new_ot_assignment)
-        except Exception as error:
-            ot_assignment_data = session.query(OtAssignment).where(
-                OtAssignment.mssp_id == new_masterplan.id).all()
-            masterplan_data = session.query(Masterplan).get(new_masterplan.id)
-            for obj in ot_assignment_data:
-                session.delete(obj)
-            session.delete(masterplan_data)
-            session.commit()
-            send_error_response(str(error), 'Cannot create master plan')
-
-    new_masterplan.id
-    return new_masterplan
+    try:
+        session.add_all(surgeries)
+        session.add_all(ot_assignments)
+        session.commit()
+        new_masterplan.id
+        return new_masterplan
+    except Exception as error:
+        session.rollback()
+        session.commit()
+        send_error_response(str(error), 'Cannot create master plan')
 
 
 @router.get('/otassignment')
