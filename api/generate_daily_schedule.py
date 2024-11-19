@@ -7,12 +7,13 @@ from utils.error_response import send_error_response
 from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from utils.parse_date import parse_date
 from utils.add_duration import add_duration
-from datetime import date as dt_datetime, datetime, time
+from datetime import date as dt_datetime, datetime, time, timedelta
+from itertools import cycle
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 from sqlalchemy import func
-from typing import Dict, Optional
+from typing import List, Optional
 from schemas.schedule_results import ScheduleResultsSchema
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
@@ -94,82 +95,108 @@ def generate_daily_schedule(
     token: str = Depends(TokenAuthorization)
 ):
     check_excell_format(file, session, token)
-    if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
-        send_error_response('Wrong file type, only accept xlsx')
+    # Validate file type
+    if file.content_type not in [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel"
+    ]:
+        send_error_response('Wrong file type, only accepts xlsx')
+
+    # Load and validate Excel headers
     expected_headers = [
         "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
         "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
-        "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED",
+        "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED"
     ]
     contents = file.file.read()
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
-    actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
+    actual_headers = [cell.value for cell in sheet[1]]
     for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
         if expected != actual:
             send_error_response(
                 f"Column {idx}: Expected '{expected}', found '{actual}'"
             )
 
-    run_id = f"RUN-{int(datetime.now().timestamp())}"
+    # Parse and validate dates
+    try:
+        start_date_dt = parse_date(start_date)
+        end_date_dt = parse_date(end_date)
+    except ValueError as error:
+        send_error_response(
+            f"Invalid date format for start or end date: {error}")
+
+    if start_date_dt > end_date_dt:
+        send_error_response('Start date cannot be after end date')
+
+    # Generate operation dates and setup cyclic generator
+    operation_dates = [
+        start_date_dt + timedelta(days=i)
+        for i in range((end_date_dt - start_date_dt).days + 1)
+    ]
+    operation_date_cycle = cycle(operation_dates)
+
+    # Validate master plan existence
     master_plan = session.query(Masterplan).where(
         Masterplan.id == master_plan_id).first()
     if master_plan is None:
         send_error_response('Master plan not found')
 
-    start_date_str = parse_date(start_date)
-    end_date_str = parse_date(end_date)
+    run_id = f"RUN-{int(datetime.now().timestamp())}"
 
-    ot_start_time_map: Dict[str, time] = {}
-    schedule_results = []
+    schedule_results: List[ScheduleResults] = []
 
-    for row_idx, row in enumerate(
-        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
-        start=2
-    ):
+    # Process each row in the Excel file
+    for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
         try:
-            booking_date = parse_date(str(row[0]))
+            age = int(row[2])
         except ValueError as error:
             send_error_response(
-                f"Invalid date format for booking date: {error}"
-            )
-
-        try:
-            age = int(str(row[2]))
-        except ValueError as error:
-            send_error_response(f"Invalid age format: {error}")
+                f"Invalid age format at row {row_idx}: {error}")
 
         duration_str = str(row[11])
+        if not duration_str.isdigit() or len(duration_str) != 4:
+            send_error_response(
+                f"Invalid duration format at row {row_idx}, expected HHMM")
         try:
             duration_hours = int(duration_str[:2])
             duration_minutes = int(duration_str[2:])
+            if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
+                raise ValueError("Duration out of valid range")
             duration = duration_hours * 60 + duration_minutes
         except ValueError as error:
-            send_error_response(f"Invalid duration format: {error}")
+            send_error_response(
+                f"Invalid duration format or value at row {row_idx}: {error}")
 
+        # Assign operation date
+        operation_date = next(operation_date_cycle)
+
+        # Check OT assignment
         ot_assignment = session.query(OtAssignment).where(
-            OtAssignment.mssp_id == master_plan_id).first()
+            OtAssignment.mssp_id == master_plan_id
+        ).first()
         if ot_assignment is None:
             continue
 
-        day_key = booking_date.strftime('%Y-%m-%d')
-        ot_start_time = ot_start_time_map.get(day_key, time(8, 0))
-        ot_end_time = add_duration(str(ot_start_time), duration)
-        ot_start_time_map[day_key] = ot_end_time
-
+        # Format procedure name
         procedure_name = row[10]
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        schedule_results_schema = ScheduleResultsSchema(
+        # Calculate time slots
+        ot_start_time = time(8, 0)
+        ot_end_time = add_duration(str(ot_start_time), duration)
+
+        # Create schedule result schema
+        schedule_result = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
             age=age,
-            week_id=map_day_of_week_to_day_id(str(booking_date), session),
-            week_day=booking_date.strftime('%A'),
-            surgery_date=booking_date.date(),
+            week_id=map_day_of_week_to_day_id(str(operation_date), session),
+            week_day=operation_date.strftime('%A'),
+            surgery_date=operation_date.date(),
             type_of_surgery=str(row[7]),
             sub_specialty_desc=str(row[8]),
             specialty_id=str(row[9]),
@@ -192,11 +219,9 @@ def generate_daily_schedule(
             icu_start_time=add_duration(str(ot_end_time), 60),
             icu_end_time=add_duration(str(ot_end_time), 240)
         )
-        new_schedule_results = ScheduleResults(
-            **schedule_results_schema.dict()
-        )
-        schedule_results.append(new_schedule_results)
+        schedule_results.append(ScheduleResults(**schedule_result.dict()))
 
+    # Commit results to database
     try:
         session.add_all(schedule_results)
         session.commit()
@@ -206,7 +231,6 @@ def generate_daily_schedule(
         }
     except Exception as error:
         session.rollback()
-        session.commit()
         send_error_response(str(error), 'Cannot create daily schedule')
 
 
