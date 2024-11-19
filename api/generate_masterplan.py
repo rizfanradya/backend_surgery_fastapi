@@ -424,21 +424,12 @@ def generate_masterplan(
     get_last_id = last_id.id+1 if last_id else 1
     mssp_desc = f'MSSP: {get_last_id} generated at {current_timestamp}'
 
-    new_masterplan_schema = MasterPlanSchema(
-        description=mssp_desc,
-        objective_value=average_weight_obj,
-    )
-    new_masterplan = Masterplan(**new_masterplan_schema.dict())
-    session.add(new_masterplan)
-    session.commit()
-    session.refresh(new_masterplan)
-
     abs_path = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(abs_path))
     upload_dir = os.path.join(base_dir, 'uploads')
     os.makedirs(upload_dir, exist_ok=True)
     file_extension = file.filename.split('.')[-1]  # type: ignore
-    filename = f'{new_masterplan.id}.{file_extension}'
+    filename = f'{get_last_id}.{file_extension}'
     file_path = os.path.join(upload_dir, filename)
     contents = file.file.read()
     try:
@@ -446,7 +437,14 @@ def generate_masterplan(
             f.write(contents)
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
+
+    new_masterplan_schema = MasterPlanSchema(
+        description=mssp_desc,
+        objective_value=average_weight_obj,
+    )
+    new_masterplan = Masterplan(**new_masterplan_schema.dict())
     new_masterplan.uploaded_file = filename
+    session.add(new_masterplan)
     session.commit()
     session.refresh(new_masterplan)
 
