@@ -122,6 +122,8 @@ def generate_daily_schedule(
     end_date_str = parse_date(end_date)
 
     ot_start_time_map: Dict[str, time] = {}
+    schedule_results = []
+
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
@@ -132,9 +134,6 @@ def generate_daily_schedule(
             send_error_response(
                 f"Invalid date format for booking date: {error}"
             )
-
-        # if booking_date < start_date_str or booking_date > end_date_str:
-        #     continue
 
         try:
             age = int(str(row[2]))
@@ -196,14 +195,19 @@ def generate_daily_schedule(
         new_schedule_results = ScheduleResults(
             **schedule_results_schema.dict()
         )
-        session.add(new_schedule_results)
-        session.commit()
-        session.refresh(new_schedule_results)
+        schedule_results.append(new_schedule_results)
 
-    return {
-        "run_id": run_id,
-        "message": "Schedule generated successfully"
-    }
+    try:
+        session.add_all(schedule_results)
+        session.commit()
+        return {
+            "run_id": run_id,
+            "message": "Schedule generated successfully"
+        }
+    except Exception as error:
+        session.rollback()
+        session.commit()
+        send_error_response(str(error), 'Cannot create daily schedule')
 
 
 @router.get('/run_id')
