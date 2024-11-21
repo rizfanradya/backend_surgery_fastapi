@@ -1,9 +1,9 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class MasterPlanSchema(BaseModel):
-    description: str
+    description: Optional[str] = None
     objective_value: int
 
 

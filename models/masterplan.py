@@ -12,7 +12,7 @@ class Masterplan(Base):
     __tablename__ = "masterplan"
 
     id = Column(Integer, primary_key=True, index=True)
-    description = Column(String(length=255), nullable=False)
+    description = Column(String(length=255))
     objective_value = Column(Integer, nullable=False)
     created_at = Column(
         DateTime, default=lambda: datetime.now(WIB), nullable=False)

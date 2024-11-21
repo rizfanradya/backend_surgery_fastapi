@@ -7,12 +7,12 @@ from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
+from utils.assign_ot_id_and_day_id import assign_ot_id_and_day_id
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text
 from io import BytesIO
 from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
-from collections import defaultdict
 import os
 import pytz
 from schemas.generate_masterplan import UpdateObjectivesWeightsSchema, ConstraintsResponseSchema, InsertConstraintsSchema
@@ -408,8 +408,8 @@ def generate_masterplan(
 ):
     check_excell_format(file, session, token)
 
-    start_date_str = parse_date(start_date)
-    end_date_str = parse_date(end_date)
+    start_date_dt = parse_date(start_date)
+    end_date_dt = parse_date(end_date)
 
     total_weight, num_objectives = session.query(
         func.sum(Objectives.weight),
@@ -419,34 +419,32 @@ def generate_masterplan(
     wib_timezone = pytz.timezone("Asia/Jakarta")
     current_timestamp = datetime.now(
         wib_timezone).strftime('%Y-%m-%d %H:%M:%S')
-    last_id = session.query(Masterplan).order_by(
-        Masterplan.id.desc()).first()  # type: ignore
-    get_last_id = last_id.id+1 if last_id else 1
-    mssp_desc = f'MSSP: {get_last_id} generated at {current_timestamp}'
 
+    new_masterplan_schema = MasterPlanSchema(
+        objective_value=average_weight_obj
+    )
+    new_masterplan = Masterplan(**new_masterplan_schema.dict())
+    session.add(new_masterplan)
+    session.commit()
+    session.refresh(new_masterplan)
+
+    mssp_desc = f'MSSP: {new_masterplan.id} generated at {current_timestamp}'
     abs_path = os.path.abspath(__file__)
     base_dir = os.path.dirname(os.path.dirname(abs_path))
     upload_dir = os.path.join(base_dir, 'uploads')
     os.makedirs(upload_dir, exist_ok=True)
     file_extension = file.filename.split('.')[-1]  # type: ignore
-    filename = f'{get_last_id}.{file_extension}'
+    filename = f'{new_masterplan.id}.{file_extension}'
     file_path = os.path.join(upload_dir, filename)
     contents = file.file.read()
+    new_masterplan.uploaded_file = filename
+    new_masterplan.description = mssp_desc
+    session.commit()
     try:
         with open(file_path, 'wb') as f:
             f.write(contents)
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
-
-    new_masterplan_schema = MasterPlanSchema(
-        description=mssp_desc,
-        objective_value=average_weight_obj,
-    )
-    new_masterplan = Masterplan(**new_masterplan_schema.dict())
-    new_masterplan.uploaded_file = filename
-    session.add(new_masterplan)
-    session.commit()
-    session.refresh(new_masterplan)
 
     procedure_names = session.query(ProcedureName).all()
     units = session.query(Unit).all()
@@ -477,23 +475,31 @@ def generate_masterplan(
         try:
             booking_date = parse_date(row[0])
         except ValueError as error:
+            session.delete(new_masterplan)
+            session.commit()
             send_error_response(
                 f"Invalid date format for booking date: {error}")
 
         try:
             operation_date = parse_date(row[1])
         except ValueError as error:
+            session.delete(new_masterplan)
+            session.commit()
             send_error_response(
                 f"Invalid date format for operation date: {error}")
 
         try:
             age = int(str(row[3]))
         except ValueError as error:
+            session.delete(new_masterplan)
+            session.commit()
             send_error_response(f"Invalid age format: {error}")
 
         try:
             duration = int(str(row[14]))
         except ValueError as error:
+            session.delete(new_masterplan)
+            session.commit()
             send_error_response(f"Invalid duration format: {error}")
 
         procedure_name = row[13]
@@ -504,27 +510,25 @@ def generate_masterplan(
         procedure_name_id = procedure_name_map.get(procedure_name, 0)
 
         unit_id = unit_name_map.get(subspeciality_desc, 0)
-        ot_id = ot_name_map.get(str(row[12]), 0)
-        day_id = map_day_of_week_to_day_id(str(operation_date), session)
+        # ot_id = ot_name_map.get(str(row[12]), 0)
+        # day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
-        if ot_id == 0 or day_id == 0 or unit_id == 0:
+        if unit_id == 0:
             continue
-
-        query_ot_and_day = session.query(OtAssignment).where(
-            OtAssignment.mssp_id == new_masterplan.id,
-            OtAssignment.ot_id == ot_id,
-            OtAssignment.day_id == day_id
-        ).first()
-        if query_ot_and_day is not None:
-            session.rollback()
-            session.commit()
-            send_error_response(
-                f"Clashing detected on row {row_idx}: Subspecialty with unit {subspeciality_desc} and Procedure Name {procedure_name} conflicts with another entry on the same OT and DAY.")
 
         for sub_specialty_id, clashing_ids in clashing_group_map.items():
             if unit_id in clashing_ids:
+                session.delete(new_masterplan)
+                session.commit()
                 send_error_response(
                     f"Clashing detected for subspecialty {sub_specialty_id} with unit {unit_id}")
+
+        ot_id, day_id = assign_ot_id_and_day_id(
+            session=session,
+            ot_assignments=ot_assignments
+        )
+        if not ot_id or not day_id:
+            continue
 
         surgery_schema = SurgerySchema(
             mrn=str(row[2]),
@@ -559,7 +563,7 @@ def generate_masterplan(
         new_masterplan.id
         return new_masterplan
     except Exception as error:
-        session.rollback()
+        session.delete(new_masterplan)
         session.commit()
         send_error_response(str(error), 'Cannot create master plan')
 
@@ -644,8 +648,6 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
     workbook = load_workbook(excel_data)
     sheet = workbook.active
     actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
-    seen_combinations = defaultdict(list)
-    duplicate_entries = []
 
     for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
         if expected != actual:
@@ -664,7 +666,6 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         ot_list_name = str(row[12])
         subspeciality_desc = str(row[10])
         operation_date = parse_date(row[1])
-        day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
         if "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
@@ -681,18 +682,6 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         # if subspeciality_desc not in unit_names:
         #     send_error_response(
         #         f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
-
-        day_ot_key = (day_id, ot_list_name)
-        seen_combinations[day_ot_key].append(row_idx)
-
-    duplicate_rows = [
-        rows for rows in seen_combinations.values() if len(rows) > 1]
-    if duplicate_rows:
-        duplicate_row_str = ', '.join(
-            f"({', '.join(map(str, rows))})" for rows in duplicate_rows)
-        error_message = f"Duplicate entries with the same Day and OT have been found in the following rows: {
-            duplicate_row_str}"
-        send_error_response(error_message)
 
     file.file.seek(0)
     return {'message': 'Excel file is valid with correct headers and data matching the database.'}
