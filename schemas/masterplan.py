@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from decimal import Decimal
 
 
 class MasterPlanSchema(BaseModel):
     description: Optional[str] = None
-    objective_value: int
+    objective_value: Decimal
 
 
 class MasterPlanDataSchema(MasterPlanSchema):

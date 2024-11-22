@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from typing import List
+from decimal import Decimal
 
 
 class ObjectivesSchema(BaseModel):
     objectives: str
-    weight: int
+    weight: Decimal
 
 
 class ObjectivesDataSchema(ObjectivesSchema):

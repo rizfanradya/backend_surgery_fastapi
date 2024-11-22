@@ -1,11 +1,12 @@
 from typing import List, Dict
 from pydantic import BaseModel
 from typing import List
+from decimal import Decimal
 
 
 class ObjectivesItemBaseSchema(BaseModel):
     id: int
-    weight: int
+    weight: Decimal
 
 
 class UpdateObjectivesWeightsSchema(BaseModel):
