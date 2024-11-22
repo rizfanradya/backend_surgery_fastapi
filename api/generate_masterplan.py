@@ -184,6 +184,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             unit.sub_specialty_opt = [
                 {'value': ssp.id, 'label': ssp.description}
                 for ssp in all_sub_specialty
+                if ssp.id != unit.sub_specialty_id
             ]
 
         return {
@@ -366,6 +367,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                 if sub_specialty.value not in unique_sub_specialties:
                     unique_sub_specialties.add(sub_specialty.value)
             for value in list(unique_sub_specialties)[:2]:
+                if value == unit_data.sub_specialty_id:
+                    continue
                 sub_specialty_data = session.query(
                     SubSpecialty).get(value)
                 if sub_specialty_data is not None:
@@ -385,6 +388,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     clashing_group_ids.append(new_clashing_group.id)
             for clashing_group_id in clashing_group_ids:
                 for sub_specialty_id in sub_specialty_ids:
+                    if sub_specialty_id == unit_data.sub_specialty_id:
+                        continue
                     new_sub_specialties_clashing_group_schema = SubSpecialtiesClashingGroupsSchema(
                         sub_specialty_id=sub_specialty_id,
                         clashing_group_id=clashing_group_id
