@@ -12,7 +12,14 @@ from .config import (
 
 DATABASE_URL = f"mysql://{DBU}:{DBP}@{DBH}:{DBPRT}/{DBN}"
 
-db_engine = create_engine(DATABASE_URL)
+db_engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=60,
+    pool_recycle=1800,
+    pool_pre_ping=True
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
 
 Base = declarative_base()
@@ -23,5 +30,8 @@ def get_db():
     try:
         db = SessionLocal()
         yield db
+    except Exception as error:
+        print(f"Database session error: {error}")
     finally:
-        db.close()  # type: ignore
+        if db:
+            db.close()  # type: ignore
