@@ -26,12 +26,8 @@ Base = declarative_base()
 
 
 def get_db():
-    db = None
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         yield db
-    except Exception as error:
-        print(f"Database session error: {error}")
     finally:
-        if db:
-            db.close()  # type: ignore
+        db.close()  # type: ignore
