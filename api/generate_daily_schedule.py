@@ -1,3 +1,4 @@
+from collections import defaultdict
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from utils.database import get_db
@@ -95,14 +96,12 @@ def generate_daily_schedule(
     token: str = Depends(TokenAuthorization)
 ):
     check_excell_format(file, session, token)
-    # Validate file type
     if file.content_type not in [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-excel"
     ]:
         send_error_response('Wrong file type, only accepts xlsx')
 
-    # Load and validate Excel headers
     expected_headers = [
         "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
         "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
@@ -112,14 +111,13 @@ def generate_daily_schedule(
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
-    actual_headers = [cell.value for cell in sheet[1]]
+    actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
     for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
         if expected != actual:
             send_error_response(
                 f"Column {idx}: Expected '{expected}', found '{actual}'"
             )
 
-    # Parse and validate dates
     try:
         start_date_dt = parse_date(start_date)
         end_date_dt = parse_date(end_date)
@@ -127,35 +125,48 @@ def generate_daily_schedule(
         send_error_response(
             f"Invalid date format for start or end date: {error}")
 
-    if start_date_dt > end_date_dt:
+    if start_date_dt > end_date_dt:  # type: ignore
         send_error_response('Start date cannot be after end date')
 
-    # Generate operation dates and setup cyclic generator
     operation_dates = [
-        start_date_dt + timedelta(days=i)
-        for i in range((end_date_dt - start_date_dt).days + 1)
+        start_date_dt + timedelta(days=i)  # type: ignore
+        for i in range((end_date_dt - start_date_dt).days + 1)  # type: ignore
     ]
     operation_date_cycle = cycle(operation_dates)
 
-    # Validate master plan existence
     master_plan = session.query(Masterplan).where(
         Masterplan.id == master_plan_id).first()
     if master_plan is None:
         send_error_response('Master plan not found')
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
-
     schedule_results: List[ScheduleResults] = []
+    last_end_time = defaultdict(lambda: defaultdict(lambda: time(8, 0)))
 
-    # Process each row in the Excel file
-    for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+    for row_idx, row in enumerate(sheet.iter_rows(  # type: ignore
+        min_row=2,
+        values_only=True
+    ), start=2):
+        ot_id_by_mrn = 0
         try:
-            age = int(row[2])
+            ot_id_by_mrn = session.query(OtAssignment).where(
+                OtAssignment.mssp_id == master_plan_id,
+                OtAssignment.mrn == str(row[1])
+            ).first()  # type: ignore
+            if ot_id_by_mrn is None:
+                continue
+        except Exception as error:
+            continue
+
+        age = 0
+        try:
+            age = int(str(row[2]))
         except ValueError as error:
             send_error_response(
                 f"Invalid age format at row {row_idx}: {error}")
 
         duration_str = str(row[11])
+        duration = 0
         if not duration_str.isdigit() or len(duration_str) != 4:
             send_error_response(
                 f"Invalid duration format at row {row_idx}, expected HHMM")
@@ -169,59 +180,61 @@ def generate_daily_schedule(
             send_error_response(
                 f"Invalid duration format or value at row {row_idx}: {error}")
 
-        # Assign operation date
         operation_date = next(operation_date_cycle)
 
-        # Check OT assignment
         ot_assignment = session.query(OtAssignment).where(
             OtAssignment.mssp_id == master_plan_id
         ).first()
         if ot_assignment is None:
             continue
 
-        # Format procedure name
         procedure_name = row[10]
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        # Calculate time slots
-        ot_start_time = time(8, 0)
-        ot_end_time = add_duration(str(ot_start_time), duration)
+        # ot_start_time = time(8, 0)
+        # ot_end_time = add_duration(
+        #     str(ot_start_time), duration)  # type: ignore
 
-        # Create schedule result schema
+        ot_id = ot_id_by_mrn.ot_id
+        ot_start_time = last_end_time[ot_id][operation_date]
+        ot_start_datetime = datetime.combine(
+            operation_date, ot_start_time)  # type: ignore
+        ot_end_datetime = ot_start_datetime + timedelta(minutes=duration)
+        last_end_time[ot_id][operation_date] = ot_end_datetime.time()
+
         schedule_result = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
             age=age,
             week_id=map_day_of_week_to_day_id(str(operation_date), session),
-            week_day=operation_date.strftime('%A'),
-            surgery_date=operation_date.date(),
+            week_day=operation_date.strftime('%A'),  # type: ignore
+            surgery_date=operation_date.date(),  # type: ignore
             type_of_surgery=str(row[7]),
             sub_specialty_desc=str(row[8]),
             specialty_id=str(row[9]),
             procedure_name=procedure_name,
             surgery_duration=duration,
-            phu_id=ot_assignment.unit_id,
-            phu_start_time=ot_start_time,
-            phu_end_time=ot_end_time,
-            ot_id=ot_assignment.ot_id,
-            ot_start_time=ot_start_time,
-            ot_end_time=ot_end_time,
+            phu_id=ot_assignment.unit_id,  # type: ignore
+            phu_start_time=ot_start_datetime.time(),
+            phu_end_time=ot_end_datetime.time(),
+            ot_id=ot_id,  # type: ignore
+            ot_start_time=ot_start_datetime.time(),
+            ot_end_time=ot_end_datetime.time(),
             surgeon_name=str(row[13]),
-            post_op_id=ot_assignment.unit_id,
-            post_op_start_time=ot_end_time,
-            post_op_end_time=add_duration(str(ot_end_time), 30),
-            pacu_id=ot_assignment.unit_id,
-            pacu_start_time=ot_end_time,
-            pacu_end_time=add_duration(str(ot_end_time), 60),
-            icu_id=ot_assignment.unit_id,
-            icu_start_time=add_duration(str(ot_end_time), 60),
-            icu_end_time=add_duration(str(ot_end_time), 240)
+            post_op_id=ot_assignment.unit_id,  # type: ignore
+            post_op_start_time=ot_end_datetime.time(),
+            post_op_end_time=(ot_end_datetime + timedelta(minutes=30)).time(),
+            pacu_id=ot_assignment.unit_id,  # type: ignore
+            pacu_start_time=ot_end_datetime.time(),
+            pacu_end_time=(ot_end_datetime + timedelta(minutes=60)).time(),
+            icu_id=ot_assignment.unit_id,  # type: ignore
+            icu_start_time=(ot_end_datetime + timedelta(minutes=60)).time(),
+            icu_end_time=(ot_end_datetime + timedelta(minutes=240)).time()
         )
         schedule_results.append(ScheduleResults(**schedule_result.dict()))
 
-    # Commit results to database
     try:
         session.add_all(schedule_results)
         session.commit()
@@ -230,7 +243,6 @@ def generate_daily_schedule(
             "message": "Schedule generated successfully"
         }
     except Exception as error:
-        session.rollback()
         send_error_response(str(error), 'Cannot create daily schedule')
 
 
@@ -266,25 +278,16 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
 def export_schedule_results(run_id: str, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     schedule_result = session.query(ScheduleResults).where(
         ScheduleResults.run_id == run_id).all()
-
     if not schedule_result:
         send_error_response('Run ID not found')
-
     data = [r.__dict__ for r in schedule_result]
     df = DataFrame(data)
-    df = df[[
-        'id', 'run_id', 'mrn', 'age', 'week_id', 'week_day', 'surgery_date',
-        'type_of_surgery', 'sub_specialty_desc', 'specialty_id', 'procedure_name',
-        'surgery_duration', 'phu_id', 'phu_start_time', 'phu_end_time',
-        'ot_id', 'ot_start_time', 'ot_end_time', 'surgeon_name'
-    ]]
     output = BytesIO()
     df.to_excel(output, index=False, engine='openpyxl')
     output.seek(0)
     filename = datetime.now().strftime(
         f'schedule_results_{run_id}_%Y-%B-%d_%H:%M:%S.xlsx'
     )
-
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

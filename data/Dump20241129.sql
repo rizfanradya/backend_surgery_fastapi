@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.38, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.40, for Win64 (x86_64)
 --
 -- Host: localhost    Database: hctm_surgery
 -- ------------------------------------------------------
--- Server version	8.0.39
+-- Server version	8.0.40
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -34,7 +34,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('e2b9aafe0c9b');
+INSERT INTO `alembic_version` VALUES ('e429a13dbf30');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -302,8 +302,8 @@ DROP TABLE IF EXISTS `masterplan`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `masterplan` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `description` varchar(255) NOT NULL,
-  `objective_value` int NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `objective_value` decimal(10,2) NOT NULL,
   `created_at` datetime NOT NULL,
   `uploaded_file` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -330,7 +330,7 @@ DROP TABLE IF EXISTS `objectives`;
 CREATE TABLE `objectives` (
   `id` int NOT NULL AUTO_INCREMENT,
   `objectives` varchar(255) NOT NULL,
-  `weight` int NOT NULL,
+  `weight` decimal(10,2) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_objectives_id` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -342,7 +342,7 @@ CREATE TABLE `objectives` (
 
 LOCK TABLES `objectives` WRITE;
 /*!40000 ALTER TABLE `objectives` DISABLE KEYS */;
-INSERT INTO `objectives` VALUES (1,'Preferred Slots Reward',10),(2,'Shared Equipment Penalty',20),(3,'Extra Equipment Quantity Reward',30),(4,'Same OT Reward',40),(5,'Consecutive Days Reward',50),(6,'Same Weekly Slot Reward',60),(7,'Clashing Subspecialties Penalty',70),(8,'Exceed Parallel Slot Penalty',80),(9,'Exceed Parallel Heavy Slot Penalty',90),(10,'Reserve Ultra Clean OT Reward',100);
+INSERT INTO `objectives` VALUES (1,'Preferred Slots Reward',10.00),(2,'Shared Equipment Penalty',20.00),(3,'Extra Equipment Quantity Reward',30.00),(4,'Same OT Reward',40.00),(5,'Consecutive Days Reward',50.00),(6,'Same Weekly Slot Reward',60.00),(7,'Clashing Subspecialties Penalty',70.00),(8,'Exceed Parallel Slot Penalty',80.00),(9,'Exceed Parallel Heavy Slot Penalty',90.00),(10,'Reserve Ultra Clean OT Reward',100.00);
 /*!40000 ALTER TABLE `objectives` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -394,6 +394,7 @@ CREATE TABLE `ot_assignment` (
   `is_require_anaes` tinyint(1) NOT NULL,
   `opening_time` time NOT NULL,
   `closing_time` time NOT NULL,
+  `mrn` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_ot_assignment_id` (`id`),
   KEY `week_id` (`week_id`),
@@ -404,7 +405,8 @@ CREATE TABLE `ot_assignment` (
   CONSTRAINT `ot_assignment_ibfk_1` FOREIGN KEY (`day_id`) REFERENCES `day` (`id`),
   CONSTRAINT `ot_assignment_ibfk_2` FOREIGN KEY (`mssp_id`) REFERENCES `masterplan` (`id`),
   CONSTRAINT `ot_assignment_ibfk_3` FOREIGN KEY (`week_id`) REFERENCES `week` (`id`),
-  CONSTRAINT `ot_assignment_ibfk_4` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`)
+  CONSTRAINT `ot_assignment_ibfk_4` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
+  CONSTRAINT `ot_assignment_ibfk_5` FOREIGN KEY (`ot_id`) REFERENCES `ot` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -730,12 +732,15 @@ CREATE TABLE `surgery` (
   `age` int NOT NULL,
   `gender_code` enum('P','L') NOT NULL,
   `surgeon` varchar(255) NOT NULL,
+  `mssp_id` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `procedure_name_id` (`procedure_name_id`),
   KEY `unit_id` (`unit_id`),
   KEY `ix_surgery_id` (`id`),
+  KEY `mssp_id` (`mssp_id`),
   CONSTRAINT `surgery_ibfk_1` FOREIGN KEY (`unit_id`) REFERENCES `unit` (`id`),
-  CONSTRAINT `surgery_ibfk_2` FOREIGN KEY (`procedure_name_id`) REFERENCES `procedure_name` (`id`)
+  CONSTRAINT `surgery_ibfk_2` FOREIGN KEY (`procedure_name_id`) REFERENCES `procedure_name` (`id`),
+  CONSTRAINT `surgery_ibfk_3` FOREIGN KEY (`mssp_id`) REFERENCES `masterplan` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -851,4 +856,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-12 14:53:33
+-- Dump completed on 2024-11-29 23:18:49

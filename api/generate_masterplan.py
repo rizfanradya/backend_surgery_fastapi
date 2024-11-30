@@ -184,7 +184,7 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             unit.sub_specialty_opt = [
                 {'value': ssp.id, 'label': ssp.description}
                 for ssp in all_sub_specialty
-                if ssp.id != unit.sub_specialty_id
+                if ssp.id != unit.sub_specialty_id  # type: ignore
             ]
 
         return {
@@ -350,7 +350,7 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     equipment_requirement_schema = EquipmentRequirementSchema(
                         unit_id=constraint.id,
                         equipment_id=equipment_requirement.value,
-                        equipment_requirement_status_id=ers_used_by_some.id
+                        equipment_requirement_status_id=ers_used_by_some.id  # type: ignore
                     )
                     new_equipment_requirement = EquipmentRequirement(
                         **equipment_requirement_schema.dict()
@@ -426,7 +426,7 @@ def generate_masterplan(
         wib_timezone).strftime('%Y-%m-%d %H:%M:%S')
 
     new_masterplan_schema = MasterPlanSchema(
-        objective_value=average_weight_obj
+        objective_value=average_weight_obj  # type: ignore
     )
     new_masterplan = Masterplan(**new_masterplan_schema.dict())
     session.add(new_masterplan)
@@ -442,8 +442,8 @@ def generate_masterplan(
     filename = f'{new_masterplan.id}.{file_extension}'
     file_path = os.path.join(upload_dir, filename)
     contents = file.file.read()
-    new_masterplan.uploaded_file = filename
-    new_masterplan.description = mssp_desc
+    new_masterplan.uploaded_file = filename  # type: ignore
+    new_masterplan.description = mssp_desc  # type: ignore
     session.commit()
     try:
         with open(file_path, 'wb') as f:
@@ -477,6 +477,7 @@ def generate_masterplan(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
     ):
+        booking_date = datetime.now()
         try:
             booking_date = parse_date(row[0])
         except ValueError as error:
@@ -493,6 +494,7 @@ def generate_masterplan(
             send_error_response(
                 f"Invalid date format for operation date: {error}")
 
+        age = 0
         try:
             age = int(str(row[3]))
         except ValueError as error:
@@ -500,6 +502,7 @@ def generate_masterplan(
             session.commit()
             send_error_response(f"Invalid age format: {error}")
 
+        duration = 0
         try:
             duration = int(str(row[14]))
         except ValueError as error:
@@ -512,9 +515,10 @@ def generate_masterplan(
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
-        procedure_name_id = procedure_name_map.get(procedure_name, 0)
+        procedure_name_id = procedure_name_map.get(
+            procedure_name, 0)  # type: ignore
 
-        unit_id = unit_name_map.get(subspeciality_desc, 0)
+        unit_id = unit_name_map.get(subspeciality_desc, 0)  # type: ignore
         # ot_id = ot_name_map.get(str(row[12]), 0)
         # day_id = map_day_of_week_to_day_id(str(operation_date), session)
 
@@ -536,6 +540,7 @@ def generate_masterplan(
             continue
 
         surgery_schema = SurgerySchema(
+            mssp_id=new_masterplan.id,  # type: ignore
             mrn=str(row[2]),
             unit_id=unit_id,
             booking_date=booking_date,
@@ -547,7 +552,8 @@ def generate_masterplan(
             surgeon=str(row[16])
         )
         ot_assignment_schema = OtAssignmentSchema(
-            mssp_id=new_masterplan.id,
+            mssp_id=new_masterplan.id,  # type: ignore
+            mrn=str(row[2]),
             week_id=1,
             ot_id=ot_id,
             unit_id=unit_id,
@@ -604,7 +610,7 @@ def otassignment(
     week_ids = set()
 
     for assignment in ot_assignment:
-        ot_id = assignment.ot_id
+        ot_id = assignment.ot_id  # type: ignore
         day_name = assignment.day.name.lower()
         if ot_id not in ot_assignments_map:
             ot_assignments_map[ot_id] = {}

@@ -5,6 +5,7 @@ from datetime import time
 
 class OtAssignmentSchema(BaseModel):
     mssp_id: int
+    mrn: str
     week_id: int
     ot_id: int
     unit_id: int

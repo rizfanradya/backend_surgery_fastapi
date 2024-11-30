@@ -4,6 +4,7 @@ from datetime import date
 
 
 class SurgerySchema(BaseModel):
+    mssp_id: int
     mrn: str
     unit_id: int
     booking_date: date

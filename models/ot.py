@@ -15,6 +15,6 @@ class Ot(Base):
     ot_type = relationship('OtType', back_populates='ot')
     status = relationship('Status', back_populates='ot')
     fixed_ot = relationship('FixedOt', back_populates='ot')
-    # ot_assignment = relationship('OtAssignment', back_populates='ot')
+    ot_assignment = relationship('OtAssignment', back_populates='ot')
     preferred_ot = relationship('PreferredOt', back_populates='ot')
     blocked_ot = relationship('BlockedOt', back_populates='ot')
