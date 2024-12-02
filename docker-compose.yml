@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   mysql:
-    image: mysql:latest
+    image: mysql:8.0.40
     restart: always
     environment:
       MYSQL_USER: hctm_surgery
