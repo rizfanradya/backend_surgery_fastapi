@@ -7,16 +7,16 @@ class BlockedDaySchema(BaseModel):
     unit_id: int
 
 
-class BlockedDayDataSchema(BlockedDaySchema):
+class BaseSchema(BlockedDaySchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetBlockedDayResponseSchema(BaseModel):
+class BlockedDayResponseSchema(BaseModel):
     total_data: int
-    data: List[BlockedDayDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

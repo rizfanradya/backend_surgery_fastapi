@@ -7,16 +7,16 @@ class FixedOtSchema(BaseModel):
     unit_id: int
 
 
-class FixedOtDataSchema(FixedOtSchema):
+class BaseSchema(FixedOtSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetFixedOtResponseSchema(BaseModel):
+class FixedOtResponseSchema(BaseModel):
     total_data: int
-    data: List[FixedOtDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

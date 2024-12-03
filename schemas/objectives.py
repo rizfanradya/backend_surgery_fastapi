@@ -8,16 +8,16 @@ class ObjectivesSchema(BaseModel):
     weight: Decimal
 
 
-class ObjectivesDataSchema(ObjectivesSchema):
+class BaseSchema(ObjectivesSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetObjectivesResponseSchema(BaseModel):
+class ObjectivesResponseSchema(BaseModel):
     total_data: int
-    data: List[ObjectivesDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

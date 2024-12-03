@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.equipment_requirement import EquipmentRequirement
-from schemas.equipment_requirement import EquipmentRequirementSchema, GetEquipmentRequirementResponseSchema
+from schemas.equipment_requirement import EquipmentRequirementSchema, EquipmentRequirementResponseSchema
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def update_equipment_requirement(id: int, equipment_requirement: EquipmentRequir
         )
 
 
-@router.get('/equipment_requirement', response_model=GetEquipmentRequirementResponseSchema)
+@router.get('/equipment_requirement', response_model=EquipmentRequirementResponseSchema)
 def get_equipment_requirement(limit: int = 10, offset: int = 0, search: Optional[str] = None, equipment_requirement_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(EquipmentRequirement)
     if equipment_requirement_id:

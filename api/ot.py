@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.ot import Ot
-from schemas.ot import OtSchema, GetOtResponseSchema
+from schemas.ot import OtSchema, OtResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_ot(id: int, ot: OtSchema, session: Session = Depends(get_db), token: 
         send_error_response(str(error), 'ot type id or status id not found')
 
 
-@router.get('/ot', response_model=GetOtResponseSchema)
+@router.get('/ot', response_model=OtResponseSchema)
 def get_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None, ot_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Ot)
     if ot_id:

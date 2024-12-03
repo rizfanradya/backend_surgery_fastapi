@@ -7,16 +7,16 @@ class SubSpecialtiesClashingGroupsSchema(BaseModel):
     sub_specialty_id: int
 
 
-class SubSpecialtiesClashingGroupsDataSchema(SubSpecialtiesClashingGroupsSchema):
+class BaseSchema(SubSpecialtiesClashingGroupsSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetSubSpecialtiesClashingGroupsResponseSchema(BaseModel):
+class SubSpecialtiesClashingGroupsResponseSchema(BaseModel):
     total_data: int
-    data: List[SubSpecialtiesClashingGroupsDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

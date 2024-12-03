@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.schedule_results import ScheduleResults
-from schemas.schedule_results import ScheduleResultsSchema, GetScheduleResultsResponseSchema
+from schemas.schedule_results import ScheduleResultsSchema, ScheduleResultsResponseSchema
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def update_schedule_results(id: int, schedule_results: ScheduleResultsSchema, se
         )
 
 
-@router.get('/schedule_results', response_model=GetScheduleResultsResponseSchema)
+@router.get('/schedule_results', response_model=ScheduleResultsResponseSchema)
 def get_schedule_results(limit: int = 10, offset: int = 0, search: Optional[str] = None, schedule_results_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(ScheduleResults)
     if schedule_results_id:

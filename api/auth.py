@@ -19,10 +19,10 @@ async def user_login(form_data: OAuth2PasswordRequestForm = Depends(), session: 
     if user_info is None:
         send_error_response("User not found")
     form_data_pwd = form_data.password.encode('utf-8')
-    user_info_pwd = user_info.password.encode('utf-8')
+    user_info_pwd = user_info.password.encode('utf-8')  # type: ignore
     bcrypt_checkpw = bcrypt.checkpw(form_data_pwd, user_info_pwd)
-    access_token = create_access_token(user_info.id)
-    refresh_token = create_refresh_token(user_info.id)
+    access_token = create_access_token(user_info.id)  # type: ignore
+    refresh_token = create_refresh_token(user_info.id)  # type: ignore
     if bcrypt_checkpw:
         return {
             "id": user_info.id,  # type: ignore

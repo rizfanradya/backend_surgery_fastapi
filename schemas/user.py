@@ -1,9 +1,9 @@
 from pydantic import BaseModel, EmailStr
 from typing import List
-from schemas.role import RoleDataSchema
+from schemas.role import RoleSchema
 
 
-class BaseSchema(BaseModel):
+class MainBaseSchema(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
@@ -11,21 +11,21 @@ class BaseSchema(BaseModel):
     role_id: int
 
 
-class UserSchema(BaseSchema):
+class UserSchema(MainBaseSchema):
     password: str
 
 
-class UserDataSchema(BaseSchema):
+class BaseSchema(MainBaseSchema):
     id: int
-    role: RoleDataSchema
+    role: RoleSchema
 
     class Config:
         from_attributes = True
 
 
-class GetUserResponseSchema(BaseModel):
+class UserResponseSchema(BaseModel):
     total_data: int
-    data: List[UserDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

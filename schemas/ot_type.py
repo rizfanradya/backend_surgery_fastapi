@@ -6,16 +6,16 @@ class OtTypeSchema(BaseModel):
     description: str
 
 
-class OtTypeDataSchema(OtTypeSchema):
+class BaseSchema(OtTypeSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetOtTypeResponseSchema(BaseModel):
+class OtTypeResponseSchema(BaseModel):
     total_data: int
-    data: List[OtTypeDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

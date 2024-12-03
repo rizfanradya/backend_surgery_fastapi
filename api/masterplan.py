@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import or_
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
-from schemas.masterplan import MasterPlanSchema, GetMasterPlanResponseSchema
+from schemas.masterplan import MasterPlanSchema, MasterPlanResponseSchema
 import os
 
 router = APIRouter()
@@ -41,7 +41,7 @@ def update_masterplan(id: int, masterplan: MasterPlanSchema, session: Session = 
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/masterplan', response_model=GetMasterPlanResponseSchema)
+@router.get('/masterplan', response_model=MasterPlanResponseSchema)
 def get_masterplan(limit: int = 10, offset: int = 0, search: Optional[str] = None, masterplan_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Masterplan)
     if masterplan_id:

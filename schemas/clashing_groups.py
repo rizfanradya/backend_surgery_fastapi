@@ -6,16 +6,16 @@ class ClashingGroupsSchema(BaseModel):
     description: str
 
 
-class ClashingGroupsDataSchema(ClashingGroupsSchema):
+class BaseSchema(ClashingGroupsSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetClashingGroupsResponseSchema(BaseModel):
+class ClashingGroupsResponseSchema(BaseModel):
     total_data: int
-    data: List[ClashingGroupsDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
-from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema, GetSubSpecialtiesOtTypesResponseSchema
+from schemas.sub_specialties_ot_types import SubSpecialtiesOtTypesSchema, SubSpecialtiesOtTypesResponseSchema
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def update_sub_specialties_ot_types(id: int, sub_specialties_ot_types: SubSpecia
         )
 
 
-@router.get('/sub_specialties_ot_types', response_model=GetSubSpecialtiesOtTypesResponseSchema)
+@router.get('/sub_specialties_ot_types', response_model=SubSpecialtiesOtTypesResponseSchema)
 def get_sub_specialties_ot_types(limit: int = 10, offset: int = 0, search: Optional[str] = None, sub_specialties_ot_types_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(SubSpecialtiesOtTypes)
     if sub_specialties_ot_types_id:

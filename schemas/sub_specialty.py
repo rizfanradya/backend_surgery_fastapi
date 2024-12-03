@@ -8,16 +8,16 @@ class SubSpecialtySchema(BaseModel):
     color_hex: str
 
 
-class SubSpecialtyDataSchema(SubSpecialtySchema):
+class BaseSchema(SubSpecialtySchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetSubSpecialtyResponseSchema(BaseModel):
+class SubSpecialtyResponseSchema(BaseModel):
     total_data: int
-    data: List[SubSpecialtyDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

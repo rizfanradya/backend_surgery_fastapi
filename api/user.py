@@ -5,7 +5,7 @@ from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.hashed_password import hashed_password
 from models.user import User
-from schemas.user import UserSchema, GetUserResponseSchema
+from schemas.user import UserSchema, UserResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -48,7 +48,7 @@ def update_user(id: int, user: UserSchema, session: Session = Depends(get_db), t
         )
 
 
-@router.get('/user', response_model=GetUserResponseSchema)
+@router.get('/user', response_model=UserResponseSchema)
 def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, user_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(User)
 

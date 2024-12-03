@@ -19,6 +19,6 @@ def map_day_of_week_to_day_id(date: str, session: Session) -> int:
         return 0
     try:
         day = session.query(Day).where(Day.name.ilike(day_name)).one()
-        return day.id
+        return day.id  # type: ignore
     except NoResultFound:
         return 0

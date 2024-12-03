@@ -7,16 +7,16 @@ class SubSpecialtiesOtTypesSchema(BaseModel):
     ot_type_id: int
 
 
-class SubSpecialtiesOtTypesDataSchema(SubSpecialtiesOtTypesSchema):
+class BaseSchema(SubSpecialtiesOtTypesSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetSubSpecialtiesOtTypesResponseSchema(BaseModel):
+class SubSpecialtiesOtTypesResponseSchema(BaseModel):
     total_data: int
-    data: List[SubSpecialtiesOtTypesDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

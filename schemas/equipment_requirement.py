@@ -8,16 +8,16 @@ class EquipmentRequirementSchema(BaseModel):
     equipment_requirement_status_id: int
 
 
-class EquipmentRequirementDataSchema(EquipmentRequirementSchema):
+class BaseSchema(EquipmentRequirementSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetEquipmentRequirementResponseSchema(BaseModel):
+class EquipmentRequirementResponseSchema(BaseModel):
     total_data: int
-    data: List[EquipmentRequirementDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.week import Week
-from schemas.week import WeekSchema, GetWeekResponseSchema
+from schemas.week import WeekSchema, WeekResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_week(id: int, week: WeekSchema, session: Session = Depends(get_db), t
         send_error_response(str(error), 'status id not found')
 
 
-@router.get('/week', response_model=GetWeekResponseSchema)
+@router.get('/week', response_model=WeekResponseSchema)
 def get_week(limit: int = 10, offset: int = 0, search: Optional[str] = None, week_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Week)
     if week_id:

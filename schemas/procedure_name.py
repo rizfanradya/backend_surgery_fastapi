@@ -7,16 +7,16 @@ class ProcedureNameSchema(BaseModel):
     sub_specialty_id: int
 
 
-class ProcedureNameDataSchema(ProcedureNameSchema):
+class BaseSchema(ProcedureNameSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetProcedureNameResponseSchema(BaseModel):
+class ProcedureNameResponseSchema(BaseModel):
     total_data: int
-    data: List[ProcedureNameDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.fixed_ot import FixedOt
-from schemas.fixed_ot import FixedOtSchema, GetFixedOtResponseSchema
+from schemas.fixed_ot import FixedOtSchema, FixedOtResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_fixed_ot(id: int, fixed_ot: FixedOtSchema, session: Session = Depends
         send_error_response(str(error), 'ot id or unit id not found')
 
 
-@router.get('/fixed_ot', response_model=GetFixedOtResponseSchema)
+@router.get('/fixed_ot', response_model=FixedOtResponseSchema)
 def get_fixed_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None, fixed_ot_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(FixedOt)
     if fixed_ot_id:

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.equipment import Equipment
-from schemas.equipment import EquipmentSchema, GetEquipmentResponseSchema
+from schemas.equipment import EquipmentSchema, EquipmentResponseSchema
 router = APIRouter()
 
 
@@ -38,7 +38,7 @@ def update_equipment(id: int, equipment: EquipmentSchema, session: Session = Dep
         send_error_response(str(error), 'sub specialty id not found')
 
 
-@router.get('/equipment', response_model=GetEquipmentResponseSchema)
+@router.get('/equipment', response_model=EquipmentResponseSchema)
 def get_equipment(limit: int = 10, offset: int = 0, search: Optional[str] = None, equipment_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Equipment)
     if equipment_id:

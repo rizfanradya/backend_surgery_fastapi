@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.procedure_name import ProcedureName
-from schemas.procedure_name import ProcedureNameSchema, GetProcedureNameResponseSchema
+from schemas.procedure_name import ProcedureNameSchema, ProcedureNameResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_procedure_name(id: int, procedure_name: ProcedureNameSchema, session:
         send_error_response(str(error), 'subspecialty id not found')
 
 
-@router.get('/procedure_name', response_model=GetProcedureNameResponseSchema)
+@router.get('/procedure_name', response_model=ProcedureNameResponseSchema)
 def get_procedure_name(limit: int = 10, offset: int = 0, search: Optional[str] = None, procedure_name_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(ProcedureName)
     if procedure_name_id:

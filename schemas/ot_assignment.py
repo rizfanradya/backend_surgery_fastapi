@@ -15,16 +15,16 @@ class OtAssignmentSchema(BaseModel):
     closing_time: time
 
 
-class OtAssignmentDataSchema(OtAssignmentSchema):
+class BaseSchema(OtAssignmentSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetOtAssignmentResponseSchema(BaseModel):
+class OtAssignmentResponseSchema(BaseModel):
     total_data: int
-    data: List[OtAssignmentDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

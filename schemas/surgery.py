@@ -15,16 +15,16 @@ class SurgerySchema(BaseModel):
     surgeon: str
 
 
-class SurgeryDataSchema(SurgerySchema):
+class BaseSchema(SurgerySchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetSurgeryResponseSchema(BaseModel):
+class SurgeryResponseSchema(BaseModel):
     total_data: int
-    data: List[SurgeryDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.role import Role
-from schemas.role import RoleSchema, GetRoleResponseSchema
+from schemas.role import RoleSchema, RoleResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_role(id: int, role: RoleSchema, session: Session = Depends(get_db), t
         send_error_response(str(error), 'role already exist')
 
 
-@router.get('/role', response_model=GetRoleResponseSchema)
+@router.get('/role', response_model=RoleResponseSchema)
 def get_role(limit: int = 10, offset: int = 0, search: Optional[str] = None, role_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Role)
     if role_id:

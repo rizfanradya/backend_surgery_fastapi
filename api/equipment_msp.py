@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.equipment_msp import EquipmentMsp
-from schemas.equipment_msp import EquipmentMspSchema, GetEquipmentMspResponseSchema
+from schemas.equipment_msp import EquipmentMspSchema, EquipmentMspResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_equipment_msp(id: int, equipment_msp: EquipmentMspSchema, session: Se
         send_error_response(str(error), 'status id not found')
 
 
-@router.get('/equipment_msp', response_model=GetEquipmentMspResponseSchema)
+@router.get('/equipment_msp', response_model=EquipmentMspResponseSchema)
 def get_equipment_msp(limit: int = 10, offset: int = 0, search: Optional[str] = None, equipment_msp_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(EquipmentMsp)
     if equipment_msp_id:

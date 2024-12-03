@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.blocked_ot import BlockedOt
-from schemas.blocked_ot import BlockedOtSchema, GetBlockedOtResponseSchema
+from schemas.blocked_ot import BlockedOtSchema, BlockedOtResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_blocked_ot(id: int, blocked_ot: BlockedOtSchema, session: Session = D
         send_error_response(str(error), 'ot id or unit id not found')
 
 
-@router.get('/blocked_ot', response_model=GetBlockedOtResponseSchema)
+@router.get('/blocked_ot', response_model=BlockedOtResponseSchema)
 def get_blocked_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None, blocked_ot_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(BlockedOt)
     if blocked_ot_id:

@@ -7,16 +7,16 @@ class PreferredOtSchema(BaseModel):
     unit_id: int
 
 
-class PreferredOtDataSchema(PreferredOtSchema):
+class BaseSchema(PreferredOtSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetPreferredOtResponseSchema(BaseModel):
+class PreferredOtResponseSchema(BaseModel):
     total_data: int
-    data: List[PreferredOtDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

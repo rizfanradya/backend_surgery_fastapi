@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.specialty import Specialty
-from schemas.specialty import SpecialtySchema, GetSpecialtyResponseSchema
+from schemas.specialty import SpecialtySchema, SpecialtyResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_specialty(id: int, specialty: SpecialtySchema, session: Session = Dep
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/specialty', response_model=GetSpecialtyResponseSchema)
+@router.get('/specialty', response_model=SpecialtyResponseSchema)
 def get_specialty(limit: int = 10, offset: int = 0, search: Optional[str] = None, specialty_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Specialty)
     if specialty_id:

@@ -8,16 +8,16 @@ class EquipmentMspSchema(BaseModel):
     status_id: int
 
 
-class EquipmentMspDataSchema(EquipmentMspSchema):
+class BaseSchema(EquipmentMspSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetEquipmentMspResponseSchema(BaseModel):
+class EquipmentMspResponseSchema(BaseModel):
     total_data: int
-    data: List[EquipmentMspDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

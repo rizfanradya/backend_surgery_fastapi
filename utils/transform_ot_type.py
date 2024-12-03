@@ -1,6 +1,5 @@
 from models.ot_type import OtType
 from sqlalchemy.orm import Session
-from typing import List, Dict
 
 
 def transform_ot_types(sub_specialty_ot_types, session: Session):

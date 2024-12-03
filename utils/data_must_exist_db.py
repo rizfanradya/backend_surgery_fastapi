@@ -27,7 +27,7 @@ def data_that_must_exist_in_the_database():
             password=hashed_password('@Admin123'),
             first_name='admin',
             last_name='01',
-            role_id=role_admin.id,
+            role_id=role_admin.id,  # type: ignore
             is_active=True
         )
         new_user = User(**user_schema.dict())

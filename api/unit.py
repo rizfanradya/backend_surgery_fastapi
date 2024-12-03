@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.unit import Unit
-from schemas.unit import UnitSchema, GetUnitResponseSchema
+from schemas.unit import UnitSchema, UnitResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_unit(id: int, unit: UnitSchema, session: Session = Depends(get_db), t
         send_error_response(str(error), 'subspecialty id not found')
 
 
-@router.get('/unit', response_model=GetUnitResponseSchema)
+@router.get('/unit', response_model=UnitResponseSchema)
 def get_unit(limit: int = 10, offset: int = 0, search: Optional[str] = None, unit_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Unit)
     if unit_id:

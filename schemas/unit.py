@@ -12,16 +12,16 @@ class UnitSchema(BaseModel):
     color_hex: str
 
 
-class UnitDataSchema(UnitSchema):
+class BaseSchema(UnitSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetUnitResponseSchema(BaseModel):
+class UnitResponseSchema(BaseModel):
     total_data: int
-    data: List[UnitDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

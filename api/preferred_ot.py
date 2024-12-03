@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.preferred_ot import PreferredOt
-from schemas.preferred_ot import PreferredOtSchema, GetPreferredOtResponseSchema
+from schemas.preferred_ot import PreferredOtSchema, PreferredOtResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_preferred_ot(id: int, preferred_ot: PreferredOtSchema, session: Sessi
         send_error_response(str(error), 'ot id or unit id not found')
 
 
-@router.get('/preferred_ot', response_model=GetPreferredOtResponseSchema)
+@router.get('/preferred_ot', response_model=PreferredOtResponseSchema)
 def get_preferred_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None, preferred_ot_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(PreferredOt)
     if preferred_ot_id:

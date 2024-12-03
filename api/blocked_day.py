@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.blocked_day import BlockedDay
-from schemas.blocked_day import BlockedDaySchema, GetBlockedDayResponseSchema
+from schemas.blocked_day import BlockedDaySchema, BlockedDayResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_blocked_day(id: int, blocked_day: BlockedDaySchema, session: Session 
         send_error_response(str(error), 'day id or unit id not found')
 
 
-@router.get('/blocked_day', response_model=GetBlockedDayResponseSchema)
+@router.get('/blocked_day', response_model=BlockedDayResponseSchema)
 def get_blocked_day(limit: int = 10, offset: int = 0, search: Optional[str] = None, blocked_day_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(BlockedDay)
     if blocked_day_id:

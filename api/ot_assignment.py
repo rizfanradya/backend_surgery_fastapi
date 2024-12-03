@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.ot_assignment import OtAssignment
-from schemas.ot_assignment import OtAssignmentSchema, GetOtAssignmentResponseSchema
+from schemas.ot_assignment import OtAssignmentSchema, OtAssignmentResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -45,7 +45,7 @@ def update_ot_assignment(id: int, ot_assignment: OtAssignmentSchema, session: Se
         )
 
 
-@router.get('/ot_assignment', response_model=GetOtAssignmentResponseSchema)
+@router.get('/ot_assignment', response_model=OtAssignmentResponseSchema)
 def get_ot_assignment(limit: int = 10, offset: int = 0, search: Optional[str] = None, ot_assignment_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(OtAssignment)
     if ot_assignment_id:

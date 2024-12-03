@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.objectives import Objectives
-from schemas.objectives import ObjectivesSchema, GetObjectivesResponseSchema
+from schemas.objectives import ObjectivesSchema, ObjectivesResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_objectives(id: int, objectives: ObjectivesSchema, session: Session = 
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/objectives', response_model=GetObjectivesResponseSchema)
+@router.get('/objectives', response_model=ObjectivesResponseSchema)
 def get_objectives(limit: int = 10, offset: int = 0, search: Optional[str] = None, objectives_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Objectives)
     if objectives_id:

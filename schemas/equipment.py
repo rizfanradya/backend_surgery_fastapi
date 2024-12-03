@@ -8,16 +8,16 @@ class EquipmentSchema(BaseModel):
     sub_specialty_id: int
 
 
-class EquipmentDataSchema(EquipmentSchema):
+class BaseSchema(EquipmentSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetEquipmentResponseSchema(BaseModel):
+class EquipmentResponseSchema(BaseModel):
     total_data: int
-    data: List[EquipmentDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

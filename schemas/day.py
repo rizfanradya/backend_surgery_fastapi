@@ -7,16 +7,16 @@ class DaySchema(BaseModel):
     week_id: int
 
 
-class DayDataSchema(DaySchema):
+class BaseSchema(DaySchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetDayResponseSchema(BaseModel):
+class DayResponseSchema(BaseModel):
     total_data: int
-    data: List[DayDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

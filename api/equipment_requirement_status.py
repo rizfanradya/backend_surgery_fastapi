@@ -6,7 +6,8 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.equipment_requirement_status import EquipmentRequirementStatus
-from schemas.equipment_requirement_status import EquipmentRequirementStatusSchema, GetEquipmentRequirementStatusResponseSchema
+from schemas.equipment_requirement_status import EquipmentRequirementStatusSchema, EquipmentRequirementStatusResponseSchema
+
 router = APIRouter()
 
 
@@ -40,7 +41,7 @@ def update_equipment_requirement_status(id: int, equipment_requirement_status: E
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/equipment_requirement_status', response_model=GetEquipmentRequirementStatusResponseSchema)
+@router.get('/equipment_requirement_status', response_model=EquipmentRequirementStatusResponseSchema)
 def get_equipment_requirement_status(limit: int = 10, offset: int = 0, search: Optional[str] = None, equipment_requirement_status_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(EquipmentRequirementStatus)
     if equipment_requirement_status_id:

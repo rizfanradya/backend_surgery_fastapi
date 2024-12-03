@@ -6,16 +6,16 @@ class StatusSchema(BaseModel):
     description: str
 
 
-class StatusDataSchema(StatusSchema):
+class BaseSchema(StatusSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetStatusResponseSchema(BaseModel):
+class StatusResponseSchema(BaseModel):
     total_data: int
-    data: List[StatusDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

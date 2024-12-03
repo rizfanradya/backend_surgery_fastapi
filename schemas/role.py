@@ -6,16 +6,16 @@ class RoleSchema(BaseModel):
     role: str
 
 
-class RoleDataSchema(RoleSchema):
+class BaseSchema(RoleSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetRoleResponseSchema(BaseModel):
+class RoleResponseSchema(BaseModel):
     total_data: int
-    data: List[RoleDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

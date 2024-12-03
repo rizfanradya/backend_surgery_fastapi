@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.ot_type import OtType
-from schemas.ot_type import OtTypeSchema, GetOtTypeResponseSchema
+from schemas.ot_type import OtTypeSchema, OtTypeResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_ot_type(id: int, ot_type: OtTypeSchema, session: Session = Depends(ge
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/ot_type', response_model=GetOtTypeResponseSchema)
+@router.get('/ot_type', response_model=OtTypeResponseSchema)
 def get_ot_type(limit: int = 10, offset: int = 0, search: Optional[str] = None, ot_type_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(OtType)
     if ot_type_id:

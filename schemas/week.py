@@ -8,16 +8,16 @@ class WeekSchema(BaseModel):
     status_id: int
 
 
-class WeekDataSchema(WeekSchema):
+class BaseSchema(WeekSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetWeekResponseSchema(BaseModel):
+class WeekResponseSchema(BaseModel):
     total_data: int
-    data: List[WeekDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

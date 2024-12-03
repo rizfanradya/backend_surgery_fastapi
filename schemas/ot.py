@@ -8,16 +8,16 @@ class OtSchema(BaseModel):
     status_id: int
 
 
-class OtDataSchema(OtSchema):
+class BaseSchema(OtSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetOtResponseSchema(BaseModel):
+class OtResponseSchema(BaseModel):
     total_data: int
-    data: List[OtDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

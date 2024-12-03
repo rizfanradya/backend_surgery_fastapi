@@ -6,16 +6,16 @@ class SpecialtySchema(BaseModel):
     name: str
 
 
-class SpecialtyDataSchema(SpecialtySchema):
+class BaseSchema(SpecialtySchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetSpecialtyResponseSchema(BaseModel):
+class SpecialtyResponseSchema(BaseModel):
     total_data: int
-    data: List[SpecialtyDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

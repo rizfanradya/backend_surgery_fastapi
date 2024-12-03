@@ -7,16 +7,16 @@ class BlockedOtSchema(BaseModel):
     unit_id: int
 
 
-class BlockedOtDataSchema(BlockedOtSchema):
+class BaseSchema(BlockedOtSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetBlockedOtResponseSchema(BaseModel):
+class BlockedOtResponseSchema(BaseModel):
     total_data: int
-    data: List[BlockedOtDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

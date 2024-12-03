@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from models.day import Day
-from schemas.day import DaySchema, GetDayResponseSchema
+from schemas.day import DaySchema, DayResponseSchema
 from typing import Optional
 from sqlalchemy import or_
 
@@ -39,7 +39,7 @@ def update_day(id: int, day: DaySchema, session: Session = Depends(get_db), toke
         send_error_response(str(error), 'week id not found')
 
 
-@router.get('/day', response_model=GetDayResponseSchema)
+@router.get('/day', response_model=DayResponseSchema)
 def get_day(limit: int = 10, offset: int = 0, search: Optional[str] = None, day_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Day)
     if day_id:

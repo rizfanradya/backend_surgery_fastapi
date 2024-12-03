@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
-from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema, GetSubSpecialtiesClashingGroupsResponseSchema
+from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema, SubSpecialtiesClashingGroupsResponseSchema
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ def update_sub_specialties_clashing_groups(id: int, sub_specialties_clashing_gro
         )
 
 
-@router.get('/sub_specialties_clashing_groups', response_model=GetSubSpecialtiesClashingGroupsResponseSchema)
+@router.get('/sub_specialties_clashing_groups', response_model=SubSpecialtiesClashingGroupsResponseSchema)
 def get_sub_specialties_clashing_groups(limit: int = 10, offset: int = 0, search: Optional[str] = None, sub_specialties_clashing_groups_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(SubSpecialtiesClashingGroups)
     if sub_specialties_clashing_groups_id:

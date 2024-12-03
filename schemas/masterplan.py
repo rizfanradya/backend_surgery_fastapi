@@ -8,16 +8,16 @@ class MasterPlanSchema(BaseModel):
     objective_value: Decimal
 
 
-class MasterPlanDataSchema(MasterPlanSchema):
+class BaseSchema(MasterPlanSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetMasterPlanResponseSchema(BaseModel):
+class MasterPlanResponseSchema(BaseModel):
     total_data: int
-    data: List[MasterPlanDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

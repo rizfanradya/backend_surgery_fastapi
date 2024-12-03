@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.surgery import Surgery
-from schemas.surgery import SurgerySchema, GetSurgeryResponseSchema
+from schemas.surgery import SurgerySchema, SurgeryResponseSchema
 
 router = APIRouter()
 
@@ -45,7 +45,7 @@ def update_surgery(id: int, surgery: SurgerySchema, session: Session = Depends(g
         )
 
 
-@router.get('/surgery', response_model=GetSurgeryResponseSchema)
+@router.get('/surgery', response_model=SurgeryResponseSchema)
 def get_surgery(limit: int = 10, offset: int = 0, search: Optional[str] = None, surgery_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(Surgery)
     if surgery_id:

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.sub_specialty import SubSpecialty
-from schemas.sub_specialty import SubSpecialtySchema, GetSubSpecialtyResponseSchema
+from schemas.sub_specialty import SubSpecialtySchema, SubSpecialtyResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_sub_specialty(id: int, sub_specialty: SubSpecialtySchema, session: Se
         send_error_response(str(error), 'specialty id not found')
 
 
-@router.get('/sub_specialty', response_model=GetSubSpecialtyResponseSchema)
+@router.get('/sub_specialty', response_model=SubSpecialtyResponseSchema)
 def get_sub_specialty(limit: int = 10, offset: int = 0, search: Optional[str] = None, sub_specialty_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(SubSpecialty)
     if sub_specialty_id:

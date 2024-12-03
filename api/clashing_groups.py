@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from typing import Optional
 from sqlalchemy import or_
 from models.clashing_groups import ClashingGroups
-from schemas.clashing_groups import ClashingGroupsSchema, GetClashingGroupsResponseSchema
+from schemas.clashing_groups import ClashingGroupsSchema, ClashingGroupsResponseSchema
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ def update_clashing_groups(id: int, clashing_groups: ClashingGroupsSchema, sessi
         send_error_response(str(error), 'Cannot update this data')
 
 
-@router.get('/clashing_groups', response_model=GetClashingGroupsResponseSchema)
+@router.get('/clashing_groups', response_model=ClashingGroupsResponseSchema)
 def get_clashing_groups(limit: int = 10, offset: int = 0, search: Optional[str] = None, clashing_groups_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     query = session.query(ClashingGroups)
     if clashing_groups_id:

@@ -33,16 +33,16 @@ class ScheduleResultsSchema(BaseModel):
     icu_end_time: time
 
 
-class ScheduleResultsDataSchema(ScheduleResultsSchema):
+class BaseSchema(ScheduleResultsSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetScheduleResultsResponseSchema(BaseModel):
+class ScheduleResultsResponseSchema(BaseModel):
     total_data: int
-    data: List[ScheduleResultsDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True

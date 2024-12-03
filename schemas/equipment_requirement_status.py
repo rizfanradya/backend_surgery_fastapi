@@ -7,16 +7,16 @@ class EquipmentRequirementStatusSchema(BaseModel):
     penalty_value: int
 
 
-class EquipmentRequirementStatusDataSchema(EquipmentRequirementStatusSchema):
+class BaseSchema(EquipmentRequirementStatusSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class GetEquipmentRequirementStatusResponseSchema(BaseModel):
+class EquipmentRequirementStatusResponseSchema(BaseModel):
     total_data: int
-    data: List[EquipmentRequirementStatusDataSchema]
+    data: List[BaseSchema]
 
     class Config:
         from_attributes = True
