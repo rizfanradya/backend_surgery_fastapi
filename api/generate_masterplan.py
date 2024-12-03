@@ -27,6 +27,7 @@ from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
 from schemas.masterplan import MasterPlanSchema
 from schemas.surgery import SurgerySchema
 from schemas.ot_assignment import OtAssignmentSchema
+from schemas.clashing_subspecialties import ClashingSubSpecialtiesSchema
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.ot_assignment import OtAssignment
@@ -114,10 +115,19 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
                 SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
             # sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
             #     SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
+            # sub_specialty_clashing_groups = [
+            #     clashing_group.sub_specialty_id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
+            #         SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id
+            #     ).all()
+            # ]
+            sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups.sub_specialty_id).join(
+                ClashingSubSpecialties,
+                SubSpecialtiesClashingGroups.clashing_group_id == ClashingSubSpecialties.clashing_groups_id
+            ).filter(
+                ClashingSubSpecialties.unit_id == unit.id
+            ).distinct().all()
             sub_specialty_clashing_groups = [
-                clashing_group.sub_specialty_id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
-                    SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id
-                ).all()
+                group[0] for group in sub_specialty_clashing_groups
             ]
 
             unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
@@ -221,6 +231,7 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
         'sub_specialties_clashing_groups',
         'equipment_requirement',
         'clashing_groups',
+        'clashing_subspecialties',
     ]
 
     for constraint in ins_constraints.insConstraints:
@@ -386,6 +397,22 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.add(new_clashing_group)
                     session.commit()
                     session.refresh(new_clashing_group)
+
+                    clashing_subspecialties = session.query(ClashingSubSpecialties).where(
+                        ClashingSubSpecialties.clashing_groups_id == new_clashing_group.id,
+                        ClashingSubSpecialties.unit_id == unit_data.id
+                    ).first()
+                    if clashing_subspecialties is None:
+                        new_clashing_subspecialties_schema = ClashingSubSpecialtiesSchema(
+                            clashing_groups_id=new_clashing_group.id,  # type: ignore
+                            unit_id=unit_data.id
+                        )
+                        new_clashing_subspecialties = ClashingSubSpecialties(
+                            **new_clashing_subspecialties_schema.dict()
+                        )
+                        session.add(new_clashing_subspecialties)
+                        session.commit()
+                        session.refresh(new_clashing_subspecialties)
                     clashing_group_ids.append(new_clashing_group.id)
             for clashing_group_id in clashing_group_ids:
                 for sub_specialty_id in sub_specialty_ids:

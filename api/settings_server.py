@@ -76,6 +76,7 @@ def truncate_constraints(session: Session = Depends(get_db), token: str = Depend
             'sub_specialties_clashing_groups',
             'equipment_requirement',
             'clashing_groups',
+            'clashing_subspecialties',
         ]
         session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
         for table in truncate_tables:
