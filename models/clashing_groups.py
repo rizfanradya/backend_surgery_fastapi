@@ -13,3 +13,7 @@ class ClashingGroups(Base):
         'SubSpecialtiesClashingGroups',
         back_populates='clashing_groups'
     )
+    clashing_subspecialties = relationship(
+        'ClashingSubSpecialties',
+        back_populates='clashing_groups'
+    )

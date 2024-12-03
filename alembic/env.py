@@ -31,6 +31,7 @@ from models.equipment_requirement import *
 from models.sub_specialties_clashing_groups import *
 from models.sub_specialties_ot_types import *
 from models.schedule_results import *
+from models.clashing_subspecialties import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

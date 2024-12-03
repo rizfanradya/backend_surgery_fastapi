@@ -49,6 +49,7 @@ from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
 from models.clashing_groups import ClashingGroups
 from models.surgery import Surgery
+from models.clashing_subspecialties import ClashingSubSpecialties
 
 router = APIRouter()
 

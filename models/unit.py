@@ -3,6 +3,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
+from .clashing_subspecialties import ClashingSubSpecialties
 
 
 class Unit(Base):
@@ -31,3 +32,7 @@ class Unit(Base):
     ot_assignment = relationship('OtAssignment', back_populates='unit')
     preferred_ot = relationship('PreferredOt', back_populates='unit')
     surgery = relationship('Surgery', back_populates='unit')
+    clashing_subspecialties = relationship(
+        'ClashingSubSpecialties',
+        back_populates='unit'
+    )
