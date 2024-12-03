@@ -378,7 +378,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             for sub_specialty in constraint.sub_specialtys:
                 if sub_specialty.value not in unique_sub_specialties:
                     unique_sub_specialties.add(sub_specialty.value)
-            for value in list(unique_sub_specialties)[:2]:
+            # for value in list(unique_sub_specialties)[:2]:
+            for value in list(unique_sub_specialties):
                 if value == unit_data.sub_specialty_id:
                     continue
                 sub_specialty_data = session.query(
