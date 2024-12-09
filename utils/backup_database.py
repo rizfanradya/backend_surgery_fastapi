@@ -5,7 +5,7 @@ from .config import DB_HOSTNAME, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
 
 def backup_database():
-    MAX_BACKUPS = 5
+    MAX_BACKUPS = 3
     base_dir = os.path.dirname(os.path.abspath(__file__))
     backup_folder = os.path.join(base_dir, "..", "backups")
     os.makedirs(backup_folder, exist_ok=True)
