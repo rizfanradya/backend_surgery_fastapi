@@ -192,7 +192,6 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
         if data is not None:
             data.weight = 100 if update.weight >= 100 else update.weight
         session.commit()
-        session.refresh(data)
     return objectives_weights
 
 
@@ -249,7 +248,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             unit_data.max_slot_limit = constraint.max_slot_limit
             unit_data.no_of_slots = constraint.max_slot_limit if constraint.no_of_slots >= constraint.max_slot_limit else constraint.no_of_slots
             session.commit()
-            session.refresh(unit_data)
 
             if fixed_ot_type and any(item.value for key, item in constraint.ot_types.items() if item.id == fixed_ot_type.id):
                 for key, item in constraint.ot_types.items():
@@ -267,7 +265,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                         new_fixed_ot = FixedOt(**fixed_ot_schema.dict())
                         session.add(new_fixed_ot)
                         session.commit()
-                        session.refresh(new_fixed_ot)
                         fixed_ot_ids.add(fixed_ot.value)
             else:
                 blocked_ot_ids = set()
@@ -281,7 +278,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                         new_blocked_ot = BlockedOt(**blocked_ot_schema.dict())
                         session.add(new_blocked_ot)
                         session.commit()
-                        session.refresh(new_blocked_ot)
                         blocked_ot_ids.add(blocked_ot.value)
 
                 preferred_ot_ids = set()
@@ -297,7 +293,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                         )
                         session.add(new_preferred_ot)
                         session.commit()
-                        session.refresh(new_preferred_ot)
                         preferred_ot_ids.add(preferred_ot.value)
 
             for key, item in constraint.ot_types.items():
@@ -312,7 +307,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     )
                     session.add(new_sub_specialties_ot_types)
                     session.commit()
-                    session.refresh(new_sub_specialties_ot_types)
 
             blocked_day_ids = set()
             for blocked_day in constraint.blocked_days:
@@ -325,7 +319,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     new_blocked_day = BlockedDay(**blocked_day_schema.dict())
                     session.add(new_blocked_day)
                     session.commit()
-                    session.refresh(new_blocked_day)
                     blocked_day_ids.add(blocked_day.value)
 
             equipment_ids = set()
@@ -343,23 +336,44 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     )
                     session.add(new_equipment_requirement)
                     session.commit()
-                    session.refresh(new_equipment_requirement)
                     equipment_ids.add(equipment_requirement.value)
 
             ssp_ids = set()
             for ssp in constraint.sub_specialtys:
                 ssp_data = session.query(SubSpecialty).get(ssp.value)
                 if ssp_data is not None and ssp.value not in ssp_ids:
-                    ssp_schema = ClashingSubSpecialtiesSchema(
+                    existing_clashing = session.query(ClashingSubSpecialties).filter_by(
                         unit_id=constraint.id,
-                        sub_specialty_id=ssp.value,
-                    )
-                    new_sub_specialty = ClashingSubSpecialties(
-                        **ssp_schema.dict())
-                    session.add(new_sub_specialty)
-                    session.commit()
-                    session.refresh(new_sub_specialty)
+                        sub_specialty_id=ssp.value
+                    ).first()
+                    if not existing_clashing:
+                        ssp_schema = ClashingSubSpecialtiesSchema(
+                            unit_id=constraint.id,
+                            sub_specialty_id=ssp.value,
+                        )
+                        new_sub_specialty = ClashingSubSpecialties(
+                            **ssp_schema.dict())
+                        session.add(new_sub_specialty)
                     ssp_ids.add(ssp.value)
+                    reverse_units = session.query(Unit).where(
+                        Unit.sub_specialty_id == ssp.value).all()
+                    for reverse_unit in reverse_units:
+                        if reverse_unit:
+                            reverse_clashing_exists = session.query(ClashingSubSpecialties).where(
+                                ClashingSubSpecialties.unit_id == reverse_unit.id,
+                                ClashingSubSpecialties.sub_specialty_id == unit_data.sub_specialty_id
+                            ).first()
+                            if not reverse_clashing_exists:
+                                reverse_ssp_schema = ClashingSubSpecialtiesSchema(
+                                    unit_id=reverse_unit.id,  # type: ignore
+                                    sub_specialty_id=unit_data.sub_specialty_id,
+                                )
+                                reverse_clashing_sub_specialty = ClashingSubSpecialties(
+                                    **reverse_ssp_schema.dict())
+                                session.add(reverse_clashing_sub_specialty)
+                                ssp_ids.add(reverse_unit.id)
+            session.commit()
+
     return {'message': 'Constraints updated successfully.'}
 
 
@@ -391,7 +405,6 @@ def generate_masterplan(
     new_masterplan = Masterplan(**new_masterplan_schema.dict())
     session.add(new_masterplan)
     session.commit()
-    session.refresh(new_masterplan)
 
     mssp_desc = f'MSSP: {new_masterplan.id} generated at {current_timestamp}'
     abs_path = os.path.abspath(__file__)
