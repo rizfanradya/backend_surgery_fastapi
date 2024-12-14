@@ -14,7 +14,7 @@ from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 from sqlalchemy import func
-from typing import List, Optional
+from typing import List, Optional, cast
 from schemas.schedule_results import ScheduleResultsSchema
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
@@ -118,6 +118,8 @@ def generate_daily_schedule(
                 f"Column {idx}: Expected '{expected}', found '{actual}'"
             )
 
+    start_date_dt = cast(datetime, start_date)
+    end_date_dt = cast(datetime, end_date)
     try:
         start_date_dt = parse_date(start_date)
         end_date_dt = parse_date(end_date)
@@ -131,6 +133,7 @@ def generate_daily_schedule(
     operation_dates = [
         start_date_dt + timedelta(days=i)  # type: ignore
         for i in range((end_date_dt - start_date_dt).days + 1)  # type: ignore
+        if (start_date_dt + timedelta(days=i)).weekday() < 5
     ]
     operation_date_cycle = cycle(operation_dates)
 
