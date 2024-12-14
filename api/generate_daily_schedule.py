@@ -8,6 +8,7 @@ from utils.error_response import send_error_response
 from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from utils.parse_date import parse_date
 from utils.add_duration import add_duration
+from utils.next_available_time import next_available_time
 from datetime import date as dt_datetime, datetime, time, timedelta
 from itertools import cycle
 from openpyxl import load_workbook, Workbook
@@ -183,7 +184,7 @@ def generate_daily_schedule(
             send_error_response(
                 f"Invalid duration format or value at row {row_idx}: {error}")
 
-        operation_date = next(operation_date_cycle)
+        operation_date: dt_datetime = next(operation_date_cycle)
 
         ot_assignment = session.query(OtAssignment).where(
             OtAssignment.mssp_id == master_plan_id
@@ -196,16 +197,26 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        # ot_start_time = time(8, 0)
-        # ot_end_time = add_duration(
-        #     str(ot_start_time), duration)  # type: ignore
-
-        ot_id = ot_id_by_mrn.ot_id
+        ot_id: int = ot_id_by_mrn.ot_id  # type: ignore
         ot_start_time = last_end_time[ot_id][operation_date]
         ot_start_datetime = datetime.combine(
             operation_date, ot_start_time)  # type: ignore
         ot_end_datetime = ot_start_datetime + timedelta(minutes=duration)
         last_end_time[ot_id][operation_date] = ot_end_datetime.time()
+
+        post_op_start_time = next_available_time(
+            schedule_results, operation_date, ot_id, "post_op"
+        )
+        post_op_end_time = add_duration(
+            post_op_start_time.strftime("%H:%M"), 30)
+        pacu_start_time = next_available_time(
+            schedule_results, operation_date, ot_id, "pacu"
+        )
+        pacu_end_time = add_duration(pacu_start_time.strftime("%H:%M"), 60)
+        icu_start_time = next_available_time(
+            schedule_results, operation_date, ot_id, "icu"
+        )
+        icu_end_time = add_duration(icu_start_time.strftime("%H:%M"), 240)
 
         schedule_result = ScheduleResultsSchema(
             run_id=run_id,
@@ -227,14 +238,14 @@ def generate_daily_schedule(
             ot_end_time=ot_end_datetime.time(),
             surgeon_name=str(row[13]),
             post_op_id=ot_assignment.unit_id,  # type: ignore
-            post_op_start_time=ot_end_datetime.time(),
-            post_op_end_time=(ot_end_datetime + timedelta(minutes=30)).time(),
+            post_op_start_time=post_op_start_time,
+            post_op_end_time=post_op_end_time,
             pacu_id=ot_assignment.unit_id,  # type: ignore
-            pacu_start_time=ot_end_datetime.time(),
-            pacu_end_time=(ot_end_datetime + timedelta(minutes=60)).time(),
+            pacu_start_time=pacu_start_time,
+            pacu_end_time=pacu_end_time,
             icu_id=ot_assignment.unit_id,  # type: ignore
-            icu_start_time=(ot_end_datetime + timedelta(minutes=60)).time(),
-            icu_end_time=(ot_end_datetime + timedelta(minutes=240)).time()
+            icu_start_time=icu_start_time,
+            icu_end_time=icu_end_time
         )
         schedule_results.append(ScheduleResults(**schedule_result.dict()))
 
