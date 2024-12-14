@@ -6,7 +6,6 @@ from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
-from utils.map_day_of_week_to_day_id import map_day_of_week_to_day_id
 from utils.assign_ot_id_and_day_id import assign_ot_id_and_day_id
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text
@@ -22,8 +21,6 @@ from schemas.blocked_ot import BlockedOtSchema
 from schemas.preferred_ot import PreferredOtSchema
 from schemas.blocked_day import BlockedDaySchema
 from schemas.equipment_requirement import EquipmentRequirementSchema
-from schemas.clashing_groups import ClashingGroupsSchema
-from schemas.sub_specialties_clashing_groups import SubSpecialtiesClashingGroupsSchema
 from schemas.masterplan import MasterPlanSchema
 from schemas.surgery import SurgerySchema
 from schemas.ot_assignment import OtAssignmentSchema
@@ -37,7 +34,6 @@ from models.week import Week
 from models.day import Day
 from models.objectives import Objectives
 from models.sub_specialties_ot_types import SubSpecialtiesOtTypes
-from models.sub_specialties_clashing_groups import SubSpecialtiesClashingGroups
 from models.ot_type import OtType
 from models.equipment_msp import EquipmentMsp
 from models.sub_specialty import SubSpecialty
@@ -48,7 +44,6 @@ from models.blocked_day import BlockedDay
 from models.equipment_requirement import EquipmentRequirement
 from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
-from models.clashing_groups import ClashingGroups
 from models.surgery import Surgery
 from models.clashing_subspecialties import ClashingSubSpecialties
 
@@ -103,32 +98,16 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
             joinedload(Unit.preferred_ot),
             joinedload(Unit.blocked_day),
             joinedload(Unit.equipment_requirement),
+            joinedload(Unit.clashing_subspecialties),
         ).order_by(Unit.id).all()  # type: ignore
 
         day_mapping = {day.id: day.name for day in all_days}
         er_msp_mapping = {e_msp.id: e_msp.name for e_msp in all_equipment_msp}
-        sub_specialty_mapping = {
-            ssp.id: ssp.description for ssp in all_sub_specialty
-        }
+        ssp_mapping = {ssp.id: ssp.description for ssp in all_sub_specialty}
+
         for unit in units:
             sub_specialty_ot_type = session.query(SubSpecialtiesOtTypes).outerjoin(OtType).where(
                 SubSpecialtiesOtTypes.sub_specialty_id == unit.sub_specialty_id).all()
-            # sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups).where(
-            #     SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id).all()
-            # sub_specialty_clashing_groups = [
-            #     clashing_group.sub_specialty_id for clashing_group in session.query(SubSpecialtiesClashingGroups).where(
-            #         SubSpecialtiesClashingGroups.sub_specialty_id == unit.sub_specialty_id
-            #     ).all()
-            # ]
-            sub_specialty_clashing_groups = session.query(SubSpecialtiesClashingGroups.sub_specialty_id).join(
-                ClashingSubSpecialties,
-                SubSpecialtiesClashingGroups.clashing_group_id == ClashingSubSpecialties.clashing_groups_id
-            ).filter(
-                ClashingSubSpecialties.unit_id == unit.id
-            ).distinct().all()
-            sub_specialty_clashing_groups = [
-                group[0] for group in sub_specialty_clashing_groups
-            ]
 
             unit.ot_types = transform_ot_types(sub_specialty_ot_type, session)
             unit.fixed_ots = [
@@ -182,15 +161,12 @@ def constraints(session: Session = Depends(get_db), token: str = Depends(TokenAu
                 for equipment_msp in all_equipment_msp
             ]
 
-            # unique_sub_specialties = set()
-            # for sscg in sub_specialty_clashing_groups:
-            #     unique_sub_specialties.add(sscg.sub_specialty_id)
             unit.sub_specialtys = [
                 {
-                    'value': ssp_id,
-                    'label': str(sub_specialty_mapping.get(ssp_id, 'Unknown'))
+                    'value': ssp.sub_specialty_id,
+                    'label': str(ssp_mapping.get(ssp.sub_specialty_id, 'Unknown'))
                 }
-                for ssp_id in sub_specialty_clashing_groups
+                for ssp in unit.clashing_subspecialties
             ]
             unit.sub_specialty_opt = [
                 {'value': ssp.id, 'label': ssp.description}
@@ -228,9 +204,7 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
         'blocked_ot',
         'fixed_ot',
         'preferred_ot',
-        'sub_specialties_clashing_groups',
         'equipment_requirement',
-        'clashing_groups',
         'clashing_subspecialties',
     ]
 
@@ -372,63 +346,20 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                     session.refresh(new_equipment_requirement)
                     equipment_ids.add(equipment_requirement.value)
 
-            clashing_group_ids = []
-            unique_sub_specialties = set()
-            sub_specialty_ids = [unit_data.sub_specialty_id]
-            for sub_specialty in constraint.sub_specialtys:
-                if sub_specialty.value not in unique_sub_specialties:
-                    unique_sub_specialties.add(sub_specialty.value)
-            # for value in list(unique_sub_specialties)[:2]:
-            for value in list(unique_sub_specialties):
-                if value == unit_data.sub_specialty_id:
-                    continue
-                sub_specialty_data = session.query(
-                    SubSpecialty).get(value)
-                if sub_specialty_data is not None:
-                    sub_specialty_ids.append(value)
-            for i in range(len(sub_specialty_ids)):
-                for j in range(i + 1, len(sub_specialty_ids)):
-                    new_clashing_group_schema = ClashingGroupsSchema(
-                        description=f"Clashing Group: {
-                            sub_specialty_ids[i]} and {sub_specialty_ids[j]}"
+            ssp_ids = set()
+            for ssp in constraint.sub_specialtys:
+                ssp_data = session.query(SubSpecialty).get(ssp.value)
+                if ssp_data is not None and ssp.value not in ssp_ids:
+                    ssp_schema = ClashingSubSpecialtiesSchema(
+                        unit_id=constraint.id,
+                        sub_specialty_id=ssp.value,
                     )
-                    new_clashing_group = ClashingGroups(
-                        **new_clashing_group_schema.dict()
-                    )
-                    session.add(new_clashing_group)
+                    new_sub_specialty = ClashingSubSpecialties(
+                        **ssp_schema.dict())
+                    session.add(new_sub_specialty)
                     session.commit()
-                    session.refresh(new_clashing_group)
-
-                    clashing_subspecialties = session.query(ClashingSubSpecialties).where(
-                        ClashingSubSpecialties.clashing_groups_id == new_clashing_group.id,
-                        ClashingSubSpecialties.unit_id == unit_data.id
-                    ).first()
-                    if clashing_subspecialties is None:
-                        new_clashing_subspecialties_schema = ClashingSubSpecialtiesSchema(
-                            clashing_groups_id=new_clashing_group.id,  # type: ignore
-                            unit_id=unit_data.id
-                        )
-                        new_clashing_subspecialties = ClashingSubSpecialties(
-                            **new_clashing_subspecialties_schema.dict()
-                        )
-                        session.add(new_clashing_subspecialties)
-                        session.commit()
-                        session.refresh(new_clashing_subspecialties)
-                    clashing_group_ids.append(new_clashing_group.id)
-            for clashing_group_id in clashing_group_ids:
-                for sub_specialty_id in sub_specialty_ids:
-                    if sub_specialty_id == unit_data.sub_specialty_id:
-                        continue
-                    new_sub_specialties_clashing_group_schema = SubSpecialtiesClashingGroupsSchema(
-                        sub_specialty_id=sub_specialty_id,
-                        clashing_group_id=clashing_group_id
-                    )
-                    new_sub_specialties_clashing_group = SubSpecialtiesClashingGroups(
-                        **new_sub_specialties_clashing_group_schema.dict()
-                    )
-                    session.add(new_sub_specialties_clashing_group)
-                    session.commit()
-                    session.refresh(new_sub_specialties_clashing_group)
+                    session.refresh(new_sub_specialty)
+                    ssp_ids.add(ssp.value)
     return {'message': 'Constraints updated successfully.'}
 
 
@@ -442,8 +373,8 @@ def generate_masterplan(
 ):
     check_excell_format(file, session, token)
 
-    start_date_dt = parse_date(start_date)
-    end_date_dt = parse_date(end_date)
+    # start_date_dt = parse_date(start_date)
+    # end_date_dt = parse_date(end_date)
 
     total_weight, num_objectives = session.query(
         func.sum(Objectives.weight),
@@ -482,19 +413,15 @@ def generate_masterplan(
 
     procedure_names = session.query(ProcedureName).all()
     units = session.query(Unit).all()
-    ots = session.query(Ot).all()
     procedure_name_map = {p.name: p.id for p in procedure_names}
     unit_name_map = {u.name: u.id for u in units}
-    ot_name_map = {o.name: o.id for o in ots}
 
-    clashing_groups = session.query(SubSpecialtiesClashingGroups).options(
-        joinedload(SubSpecialtiesClashingGroups.clashing_groups)
-    ).all()  # type: ignore
+    clashing_subspecialties = session.query(ClashingSubSpecialties).all()
     clashing_group_map = {}
-    for cg in clashing_groups:
-        if cg.sub_specialty_id not in clashing_group_map:
-            clashing_group_map[cg.sub_specialty_id] = []
-        clashing_group_map[cg.sub_specialty_id].append(cg.clashing_group_id)
+    for cs in clashing_subspecialties:
+        if cs.sub_specialty_id not in clashing_group_map:
+            clashing_group_map[cs.sub_specialty_id] = []
+        clashing_group_map[cs.sub_specialty_id].append(cs.unit_id)
 
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
@@ -514,14 +441,6 @@ def generate_masterplan(
             session.commit()
             send_error_response(
                 f"Invalid date format for booking date: {error}")
-
-        try:
-            operation_date = parse_date(row[1])
-        except ValueError as error:
-            session.delete(new_masterplan)
-            session.commit()
-            send_error_response(
-                f"Invalid date format for operation date: {error}")
 
         age = 0
         try:
@@ -548,14 +467,11 @@ def generate_masterplan(
             procedure_name, 0)  # type: ignore
 
         unit_id = unit_name_map.get(subspeciality_desc, 0)  # type: ignore
-        # ot_id = ot_name_map.get(str(row[12]), 0)
-        # day_id = map_day_of_week_to_day_id(str(operation_date), session)
-
         if unit_id == 0:
             continue
 
-        for sub_specialty_id, clashing_ids in clashing_group_map.items():
-            if unit_id in clashing_ids:
+        for sub_specialty_id, clashing_units in clashing_group_map.items():
+            if unit_id in clashing_units:
                 session.delete(new_masterplan)
                 session.commit()
                 send_error_response(
@@ -704,8 +620,8 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
     ):
         procedure_name = str(row[13])
         ot_list_name = str(row[12])
-        subspeciality_desc = str(row[10])
-        operation_date = parse_date(row[1])
+        # subspeciality_desc = str(row[10])
+        # operation_date = parse_date(row[1])
 
         if "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()

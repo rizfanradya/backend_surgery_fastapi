@@ -19,7 +19,6 @@ from models.status import *
 from models.sub_specialty import *
 from models.specialty import *
 from models.objectives import *
-from models.clashing_groups import *
 from models.equipment_msp import *
 from models.fixed_ot import *
 from models.blocked_ot import *
@@ -28,7 +27,6 @@ from models.blocked_day import *
 from models.equipment_requirement_status import *
 from models.equipment import *
 from models.equipment_requirement import *
-from models.sub_specialties_clashing_groups import *
 from models.sub_specialties_ot_types import *
 from models.schedule_results import *
 from models.clashing_subspecialties import *

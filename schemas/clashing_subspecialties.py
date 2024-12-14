@@ -3,7 +3,7 @@ from typing import List
 
 
 class ClashingSubSpecialtiesSchema(BaseModel):
-    clashing_groups_id: int
+    sub_specialty_id: int
     unit_id: int
 
 

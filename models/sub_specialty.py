@@ -19,8 +19,8 @@ class SubSpecialty(Base):
         'ProcedureName',
         back_populates='sub_specialty'
     )
-    sub_specialties_clashing_groups = relationship(
-        'SubSpecialtiesClashingGroups',
+    clashing_subspecialties = relationship(
+        'ClashingSubSpecialties',
         back_populates='sub_specialty'
     )
     sub_specialties_ot_types = relationship(

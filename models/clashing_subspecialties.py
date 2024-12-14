@@ -9,9 +9,9 @@ class ClashingSubSpecialties(Base):
     __tablename__ = "clashing_subspecialties"
 
     id = Column(Integer, primary_key=True, index=True)
-    clashing_groups_id = Column(
+    sub_specialty_id = Column(
         Integer,
-        ForeignKey('clashing_groups.id'),
+        ForeignKey('sub_specialty.id'),
         nullable=False
     )
     unit_id = Column(
@@ -19,8 +19,8 @@ class ClashingSubSpecialties(Base):
         ForeignKey('unit.id'),
         nullable=False
     )
-    clashing_groups = relationship(
-        'ClashingGroups',
+    sub_specialty = relationship(
+        'SubSpecialty',
         back_populates='clashing_subspecialties'
     )
     unit = relationship('Unit', back_populates='clashing_subspecialties')

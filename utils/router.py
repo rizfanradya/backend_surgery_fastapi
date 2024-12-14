@@ -16,7 +16,6 @@ import api.masterplan as masterplan
 import api.sub_specialty as sub_specialty
 import api.specialty as specialty
 import api.objectives as objectives
-import api.clashing_groups as clashing_groups
 import api.equipment_msp as equipment_msp
 import api.fixed_ot as fixed_ot
 import api.blocked_ot as blocked_ot
@@ -25,7 +24,6 @@ import api.blocked_day as blocked_day
 import api.equipment_requirement_status as equipment_requirement_status
 import api.equipment as equipment
 import api.equipment_requirement as equipment_requirement
-import api.sub_specialties_clashing_groups as sub_specialties_clashing_groups
 import api.sub_specialties_ot_types as sub_specialties_ot_types
 import api.surgery as surgery
 import api.schedule_results as schedule_results
@@ -50,7 +48,6 @@ routers = [
     (sub_specialty.router, "Sub Specialty API", "/api"),
     (specialty.router, "Specialty API", "/api"),
     (objectives.router, "Objectives API", "/api"),
-    (clashing_groups.router, "Clashing Groups API", "/api"),
     (equipment_msp.router, "Equipment Msp API", "/api"),
     (fixed_ot.router, "Fixed Ot API", "/api"),
     (blocked_ot.router, "Blocked Ot API", "/api"),
@@ -63,11 +60,6 @@ routers = [
     (
         equipment_requirement_status.router,
         "Equipment Requirement Status API",
-        "/api"
-    ),
-    (
-        sub_specialties_clashing_groups.router,
-        "Sub Specialties Clashing Groups API",
         "/api"
     ),
     (
