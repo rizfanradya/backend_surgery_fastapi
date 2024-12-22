@@ -1,20 +1,19 @@
 version: "3.8"
 
 services:
-  mysql:
-    image: mysql:latest
+  postgres:
+    image: postgres:latest
     restart: always
     environment:
-      MYSQL_USER: hctm_surgery
-      MYSQL_DATABASE: hctm_surgery
-      MYSQL_ROOT_PASSWORD: vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ
-      MYSQL_PASSWORD: vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ
+      POSTGRES_USER: hctm_surgery
+      POSTGRES_DB: hctm_surgery
+      POSTGRES_PASSWORD: vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ
     ports:
-      - "33062:3306"
+      - "54321:5432"
     volumes:
-      - db_data_mysql:/var/lib/mysql
+      - db_data_pgsql:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: [ "CMD-SHELL", "pg_isready -U hctm_surgery" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,7 +28,7 @@ services:
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
 
   frontend:
@@ -41,5 +40,5 @@ services:
     restart: always
 
 volumes:
-  db_data_mysql:
+  db_data_pgsql:
   backend_uploads:
