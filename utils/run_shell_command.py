@@ -20,10 +20,6 @@ def run_shell_commands():
         raise EnvironmentError("Unsupported operating system")
 
     commands = []
-    commands.extend([
-        f"{python_cmd} -m pip install --upgrade pip",
-        f"{python_cmd} -m pip install --no-cache-dir -r requirements.txt",
-    ])
 
     versions_folder = os.path.join(project_root, 'alembic', 'versions')
     if not os.path.exists(versions_folder):
