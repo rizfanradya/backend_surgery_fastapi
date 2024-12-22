@@ -38,7 +38,11 @@ def run_shell_commands():
     inspector = inspect(engine)
     if 'alembic_version' in inspector.get_table_names():  # type: ignore
         with engine.connect() as connection:  # type: ignore
-            connection.execute(text("TRUNCATE TABLE alembic_version"))
+            connection = connection.execution_options(autocommit=True)
+            connection.execute(text("BEGIN"))
+            connection.execute(
+                text("TRUNCATE TABLE alembic_version RESTART IDENTITY CASCADE"))
+            connection.execute(text("COMMIT"))
 
     commands.extend([
         f"{python_cmd} -m alembic revision --autogenerate -m 'rev'",

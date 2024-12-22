@@ -10,7 +10,7 @@ from .config import (
 )
 
 
-DATABASE_URL = f"mysql://{DBU}:{DBP}@{DBH}:{DBPRT}/{DBN}"
+DATABASE_URL = f"postgresql+psycopg2://{DBU}:{DBP}@{DBH}:{DBPRT}/{DBN}"
 
 db_engine = create_engine(
     DATABASE_URL,

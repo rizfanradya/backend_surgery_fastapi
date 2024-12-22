@@ -1,6 +1,6 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
-from sqlalchemy.types import String, Integer, Date, Enum
+from sqlalchemy.types import String, Integer, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
 
@@ -13,7 +13,7 @@ class Surgery(Base):
     booking_date = Column(Date, nullable=False)
     estimated_duration = Column(Integer, nullable=False)
     age = Column(Integer, nullable=False)
-    gender_code = Column(Enum('P', 'L'), nullable=False)
+    gender_code = Column(String(length=255), nullable=False)
     surgeon = Column(String(length=255), nullable=False)
     unit_id = Column(
         Integer,
