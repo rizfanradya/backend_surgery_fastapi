@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
 from schemas.masterplan import MasterPlanSchema, MasterPlanResponseSchema
@@ -47,10 +47,12 @@ def get_masterplan(limit: int = 10, offset: int = 0, search: Optional[str] = Non
     if masterplan_id:
         query = query.where(Masterplan.id == masterplan_id)
     if search:
-        query = query.filter(or_(*[getattr(Masterplan, column).ilike(
-            f"%{search}%"
-        ) for column in Masterplan.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Masterplan, column), String).ilike(f"%{search}%")
+            if getattr(Masterplan, column).type.python_type == str
+            else cast(getattr(Masterplan, column), String).ilike(f"%{search}%")
+            for column in Masterplan.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

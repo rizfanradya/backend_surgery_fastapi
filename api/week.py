@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.week import Week
 from schemas.week import WeekSchema, WeekResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -45,10 +45,12 @@ def get_week(limit: int = 10, offset: int = 0, search: Optional[str] = None, wee
     if week_id:
         query = query.where(Week.id == week_id)
     if search:
-        query = query.filter(or_(*[getattr(Week, column).ilike(
-            f"%{search}%"
-        ) for column in Week.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Week, column), String).ilike(f"%{search}%")
+            if getattr(Week, column).type.python_type == str
+            else cast(getattr(Week, column), String).ilike(f"%{search}%")
+            for column in Week.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

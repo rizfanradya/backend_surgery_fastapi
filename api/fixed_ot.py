@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.fixed_ot import FixedOt
 from schemas.fixed_ot import FixedOtSchema, FixedOtResponseSchema
 
@@ -45,10 +45,12 @@ def get_fixed_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None,
     if fixed_ot_id:
         query = query.where(FixedOt.id == fixed_ot_id)
     if search:
-        query = query.filter(or_(*[getattr(FixedOt, column).ilike(
-            f"%{search}%"
-        ) for column in FixedOt.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(FixedOt, column), String).ilike(f"%{search}%")
+            if getattr(FixedOt, column).type.python_type == str
+            else cast(getattr(FixedOt, column), String).ilike(f"%{search}%")
+            for column in FixedOt.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

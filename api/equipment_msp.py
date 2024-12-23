@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.equipment_msp import EquipmentMsp
 from schemas.equipment_msp import EquipmentMspSchema, EquipmentMspResponseSchema
 
@@ -45,10 +45,12 @@ def get_equipment_msp(limit: int = 10, offset: int = 0, search: Optional[str] = 
     if equipment_msp_id:
         query = query.where(EquipmentMsp.id == equipment_msp_id)
     if search:
-        query = query.filter(or_(*[getattr(EquipmentMsp, column).ilike(
-            f"%{search}%"
-        ) for column in EquipmentMsp.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(EquipmentMsp, column), String).ilike(f"%{search}%")
+            if getattr(EquipmentMsp, column).type.python_type == str
+            else cast(getattr(EquipmentMsp, column), String).ilike(f"%{search}%")
+            for column in EquipmentMsp.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

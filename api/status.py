@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.status import Status
 from schemas.status import StatusSchema, StatusResponseSchema
 
@@ -45,10 +45,12 @@ def get_status(limit: int = 10, offset: int = 0, search: Optional[str] = None, s
     if status_id:
         query = query.where(Status.id == status_id)
     if search:
-        query = query.filter(or_(*[getattr(Status, column).ilike(
-            f"%{search}%"
-        ) for column in Status.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Status, column), String).ilike(f"%{search}%")
+            if getattr(Status, column).type.python_type == str
+            else cast(getattr(Status, column), String).ilike(f"%{search}%")
+            for column in Status.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

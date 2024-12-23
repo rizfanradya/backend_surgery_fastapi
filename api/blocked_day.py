@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.blocked_day import BlockedDay
 from schemas.blocked_day import BlockedDaySchema, BlockedDayResponseSchema
 
@@ -45,10 +45,12 @@ def get_blocked_day(limit: int = 10, offset: int = 0, search: Optional[str] = No
     if blocked_day_id:
         query = query.where(BlockedDay.id == blocked_day_id)
     if search:
-        query = query.filter(or_(*[getattr(BlockedDay, column).ilike(
-            f"%{search}%"
-        ) for column in BlockedDay.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(BlockedDay, column), String).ilike(f"%{search}%")
+            if getattr(BlockedDay, column).type.python_type == str
+            else cast(getattr(BlockedDay, column), String).ilike(f"%{search}%")
+            for column in BlockedDay.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

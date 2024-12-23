@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.day import Day
 from schemas.day import DaySchema, DayResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -45,10 +45,12 @@ def get_day(limit: int = 10, offset: int = 0, search: Optional[str] = None, day_
     if day_id:
         query = query.where(Day.id == day_id)
     if search:
-        query = query.filter(or_(*[getattr(Day, column).ilike(
-            f"%{search}%"
-        ) for column in Day.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Day, column), String).ilike(f"%{search}%")
+            if getattr(Day, column).type.python_type == str
+            else cast(getattr(Day, column), String).ilike(f"%{search}%")
+            for column in Day.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

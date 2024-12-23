@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.sub_specialty import SubSpecialty
 from schemas.sub_specialty import SubSpecialtySchema, SubSpecialtyResponseSchema
 
@@ -45,10 +45,12 @@ def get_sub_specialty(limit: int = 10, offset: int = 0, search: Optional[str] = 
     if sub_specialty_id:
         query = query.where(SubSpecialty.id == sub_specialty_id)
     if search:
-        query = query.filter(or_(*[getattr(SubSpecialty, column).ilike(
-            f"%{search}%"
-        ) for column in SubSpecialty.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(SubSpecialty, column), String).ilike(f"%{search}%")
+            if getattr(SubSpecialty, column).type.python_type == str
+            else cast(getattr(SubSpecialty, column), String).ilike(f"%{search}%")
+            for column in SubSpecialty.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

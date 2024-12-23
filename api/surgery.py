@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.surgery import Surgery
 from schemas.surgery import SurgerySchema, SurgeryResponseSchema
 
@@ -51,10 +51,12 @@ def get_surgery(limit: int = 10, offset: int = 0, search: Optional[str] = None, 
     if surgery_id:
         query = query.where(Surgery.id == surgery_id)
     if search:
-        query = query.filter(or_(*[getattr(Surgery, column).ilike(
-            f"%{search}%"
-        ) for column in Surgery.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Surgery, column), String).ilike(f"%{search}%")
+            if getattr(Surgery, column).type.python_type == str
+            else cast(getattr(Surgery, column), String).ilike(f"%{search}%")
+            for column in Surgery.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

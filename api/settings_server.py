@@ -8,11 +8,14 @@ from utils.error_response import send_error_response
 from utils.remove_orphaned_files import check_and_remove_orphaned_files
 from datetime import datetime
 import io
+import os
 import subprocess
 from utils.config import (
     DB_NAME,
     DB_PASSWORD,
-    DB_USER
+    DB_USER,
+    DB_PORT,
+    DB_HOSTNAME
 )
 
 router = APIRouter()
@@ -21,20 +24,32 @@ router = APIRouter()
 @router.get('/backup_db')
 def backup_database(token: str = Depends(TokenAuthorization)):
     try:
-        command = f"mysqldump -u {DB_USER} -p{DB_PASSWORD} {DB_NAME}"
+        os.environ['PGPASSWORD'] = str(DB_PASSWORD)
+
+        command = [
+            'pg_dump',
+            '-U', DB_USER,
+            '-h', DB_HOSTNAME,
+            '-p', str(DB_PORT),
+            '-d', DB_NAME,
+            '--no-owner',
+            '--no-acl'
+        ]
+
         process = subprocess.Popen(
             command,
-            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
         )
         stdout, stderr = process.communicate()
 
+        del os.environ['PGPASSWORD']
         if process.returncode != 0:
             raise RuntimeError(f"Backup command failed: {stderr}")
         output_io = io.StringIO(stdout)
-        filename = datetime.now().strftime(f'dbdump_hctm_surgery_%Y-%B-%d_%H:%M:%S.sql')
+        filename = datetime.now().strftime(
+            f'backup_{DB_NAME}_%Y-%m-%d_%H-%M-%S.sql')
 
         return StreamingResponse(
             output_io,
@@ -42,6 +57,7 @@ def backup_database(token: str = Depends(TokenAuthorization)):
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
     except Exception as error:
+        os.environ.pop('PGPASSWORD', None)
         return send_error_response(str(error))
 
 
@@ -54,10 +70,12 @@ def truncate_master_tables(session: Session = Depends(get_db), token: str = Depe
             'surgery',
             'schedule_results',
         ]
-        session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
+        for table in truncate_tables:
+            session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
         for table in truncate_tables:
             session.execute(text(f'TRUNCATE TABLE {table}'))
-        session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+        for table in truncate_tables:
+            session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
         session.commit()
         check_and_remove_orphaned_files()
         return {'message': 'Master tables truncated successfully'}
@@ -76,10 +94,12 @@ def truncate_constraints(session: Session = Depends(get_db), token: str = Depend
             'equipment_requirement',
             'clashing_subspecialties',
         ]
-        session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
+        for table in truncate_tables:
+            session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
         for table in truncate_tables:
             session.execute(text(f'TRUNCATE TABLE {table}'))
-        session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+        for table in truncate_tables:
+            session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
         session.commit()
         check_and_remove_orphaned_files()
         return {'message': 'Constraints tables truncated successfully'}

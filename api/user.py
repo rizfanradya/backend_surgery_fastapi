@@ -7,7 +7,7 @@ from utils.hashed_password import hashed_password
 from models.user import User
 from schemas.user import UserSchema, UserResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -56,9 +56,12 @@ def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, use
         query = query.where(User.id == user_id)
 
     if search:
-        query = query.filter(or_(*[getattr(User, column).ilike(
-            f"%{search}%"
-        ) for column in User.__table__.columns.keys()]))  # type: ignore
+        query = query.filter(or_(*[
+            cast(getattr(User, column), String).ilike(f"%{search}%")
+            if getattr(User, column).type.python_type == str
+            else cast(getattr(User, column), String).ilike(f"%{search}%")
+            for column in User.__table__.columns.keys()
+        ]))
 
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore

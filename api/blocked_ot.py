@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.blocked_ot import BlockedOt
 from schemas.blocked_ot import BlockedOtSchema, BlockedOtResponseSchema
 
@@ -45,10 +45,12 @@ def get_blocked_ot(limit: int = 10, offset: int = 0, search: Optional[str] = Non
     if blocked_ot_id:
         query = query.where(BlockedOt.id == blocked_ot_id)
     if search:
-        query = query.filter(or_(*[getattr(BlockedOt, column).ilike(
-            f"%{search}%"
-        ) for column in BlockedOt.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(BlockedOt, column), String).ilike(f"%{search}%")
+            if getattr(BlockedOt, column).type.python_type == str
+            else cast(getattr(BlockedOt, column), String).ilike(f"%{search}%")
+            for column in BlockedOt.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

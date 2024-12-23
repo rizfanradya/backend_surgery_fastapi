@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.ot_assignment import OtAssignment
 from schemas.ot_assignment import OtAssignmentSchema, OtAssignmentResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -51,10 +51,12 @@ def get_ot_assignment(limit: int = 10, offset: int = 0, search: Optional[str] = 
     if ot_assignment_id:
         query = query.where(OtAssignment.id == ot_assignment_id)
     if search:
-        query = query.filter(or_(*[getattr(OtAssignment, column).ilike(
-            f"%{search}%"
-        ) for column in OtAssignment.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(OtAssignment, column), String).ilike(f"%{search}%")
+            if getattr(OtAssignment, column).type.python_type == str
+            else cast(getattr(OtAssignment, column), String).ilike(f"%{search}%")
+            for column in OtAssignment.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

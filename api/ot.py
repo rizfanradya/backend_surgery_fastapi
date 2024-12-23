@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.ot import Ot
 from schemas.ot import OtSchema, OtResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -45,10 +45,12 @@ def get_ot(limit: int = 10, offset: int = 0, search: Optional[str] = None, ot_id
     if ot_id:
         query = query.where(Ot.id == ot_id)
     if search:
-        query = query.filter(or_(*[getattr(Ot, column).ilike(
-            f"%{search}%"
-        ) for column in Ot.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Ot, column), String).ilike(f"%{search}%")
+            if getattr(Ot, column).type.python_type == str
+            else cast(getattr(Ot, column), String).ilike(f"%{search}%")
+            for column in Ot.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.unit import Unit
 from schemas.unit import UnitSchema, UnitResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -45,10 +45,12 @@ def get_unit(limit: int = 10, offset: int = 0, search: Optional[str] = None, uni
     if unit_id:
         query = query.where(Unit.id == unit_id)
     if search:
-        query = query.filter(or_(*[getattr(Unit, column).ilike(
-            f"%{search}%"
-        ) for column in Unit.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(Unit, column), String).ilike(f"%{search}%")
+            if getattr(Unit, column).type.python_type == str
+            else cast(getattr(Unit, column), String).ilike(f"%{search}%")
+            for column in Unit.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

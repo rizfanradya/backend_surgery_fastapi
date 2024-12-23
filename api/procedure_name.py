@@ -6,7 +6,7 @@ from utils.error_response import send_error_response
 from models.procedure_name import ProcedureName
 from schemas.procedure_name import ProcedureNameSchema, ProcedureNameResponseSchema
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 
 router = APIRouter()
 
@@ -45,10 +45,12 @@ def get_procedure_name(limit: int = 10, offset: int = 0, search: Optional[str] =
     if procedure_name_id:
         query = query.where(ProcedureName.id == procedure_name_id)
     if search:
-        query = query.filter(or_(*[getattr(ProcedureName, column).ilike(
-            f"%{search}%"
-        ) for column in ProcedureName.__table__.columns.keys()]  # type: ignore
-        ))
+        query = query.filter(or_(*[
+            cast(getattr(ProcedureName, column), String).ilike(f"%{search}%")
+            if getattr(ProcedureName, column).type.python_type == str
+            else cast(getattr(ProcedureName, column), String).ilike(f"%{search}%")
+            for column in ProcedureName.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

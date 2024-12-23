@@ -8,7 +8,7 @@ from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.assign_ot_id_and_day_id import assign_ot_id_and_day_id
 from typing import Literal, Optional
-from sqlalchemy import asc, desc, func, text
+from sqlalchemy import asc, desc, func, text, cast, String
 from io import BytesIO
 from datetime import datetime, date as dt_datetime
 from openpyxl import load_workbook, Workbook
@@ -227,19 +227,21 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
             )
 
     fixed_ot_type = session.query(OtType).where(
-        OtType.description.like('%fix%')).first()
+        cast(OtType.description, String).ilike('%fix%')).first()
     ers_used_by_some = session.query(EquipmentRequirementStatus).where(
-        EquipmentRequirementStatus.description.like('%used by some%')).first()
+        cast(EquipmentRequirementStatus.description, String).ilike('%used by some%')).first()
 
     if fixed_ot_type is None or ers_used_by_some is None:
         send_error_response(
             'Fixed ot type or equipment requirement status not found in database.'
         )
 
-    session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
+    for table in truncate_tables:
+        session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
     for table in truncate_tables:
         session.execute(text(f'TRUNCATE TABLE {table}'))
-    session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+    for table in truncate_tables:
+        session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
     session.commit()
 
     for constraint in ins_constraints.insConstraints:

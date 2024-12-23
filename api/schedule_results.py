@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.schedule_results import ScheduleResults
 from schemas.schedule_results import ScheduleResultsSchema, ScheduleResultsResponseSchema
 
@@ -51,10 +51,12 @@ def get_schedule_results(limit: int = 10, offset: int = 0, search: Optional[str]
     if schedule_results_id:
         query = query.where(ScheduleResults.id == schedule_results_id)
     if search:
-        query = query.filter(or_(*[getattr(ScheduleResults, column).ilike(
-            f"%{search}%"
-        ) for column in ScheduleResults.__table__.columns.keys(  # type: ignore
-        )]))
+        query = query.filter(or_(*[
+            cast(getattr(ScheduleResults, column), String).ilike(f"%{search}%")
+            if getattr(ScheduleResults, column).type.python_type == str
+            else cast(getattr(ScheduleResults, column), String).ilike(f"%{search}%")
+            for column in ScheduleResults.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {

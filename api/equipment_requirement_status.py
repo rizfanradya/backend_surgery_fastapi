@@ -4,7 +4,7 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from typing import Optional
-from sqlalchemy import or_
+from sqlalchemy import or_, cast, String
 from models.equipment_requirement_status import EquipmentRequirementStatus
 from schemas.equipment_requirement_status import EquipmentRequirementStatusSchema, EquipmentRequirementStatusResponseSchema
 
@@ -49,10 +49,13 @@ def get_equipment_requirement_status(limit: int = 10, offset: int = 0, search: O
             EquipmentRequirementStatus.id == equipment_requirement_status_id
         )
     if search:
-        query = query.filter(or_(*[getattr(EquipmentRequirementStatus, column).ilike(
-            f"%{search}%"
-        ) for column in EquipmentRequirementStatus.__table__.columns.keys(  # type: ignore
-        )]))  # type: ignore
+        query = query.filter(or_(*[
+            cast(
+                getattr(EquipmentRequirementStatus, column), String).ilike(f"%{search}%")
+            if getattr(EquipmentRequirementStatus, column).type.python_type == str
+            else cast(getattr(EquipmentRequirementStatus, column), String).ilike(f"%{search}%")
+            for column in EquipmentRequirementStatus.__table__.columns.keys()
+        ]))
     total_data = query.count()
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {
