@@ -73,7 +73,7 @@ def truncate_master_tables(session: Session = Depends(get_db), token: str = Depe
         for table in truncate_tables:
             session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
         for table in truncate_tables:
-            session.execute(text(f'TRUNCATE TABLE {table}'))
+            session.execute(text(f'TRUNCATE TABLE {table} CASCADE'))
         for table in truncate_tables:
             session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
         session.commit()
@@ -97,7 +97,7 @@ def truncate_constraints(session: Session = Depends(get_db), token: str = Depend
         for table in truncate_tables:
             session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
         for table in truncate_tables:
-            session.execute(text(f'TRUNCATE TABLE {table}'))
+            session.execute(text(f'TRUNCATE TABLE {table} CASCADE'))
         for table in truncate_tables:
             session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
         session.commit()

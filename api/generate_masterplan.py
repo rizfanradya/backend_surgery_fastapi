@@ -444,6 +444,13 @@ def generate_masterplan(
     surgeries = []
     ot_assignments = []
 
+    objectives = session.query(Objectives).where(
+        cast(Objectives.objectives, String).ilike('%clashing%')).first()
+    if objectives is None:
+        send_error_response(
+            'objective clashing subspecialties not found in database.'
+        )
+
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2
@@ -485,12 +492,14 @@ def generate_masterplan(
         if unit_id == 0:
             continue
 
+        total_clashes = 0
         for sub_specialty_id, clashing_units in clashing_group_map.items():
             if unit_id in clashing_units:
-                session.delete(new_masterplan)
-                session.commit()
-                send_error_response(
-                    f"Clashing detected for subspecialty {sub_specialty_id} with unit {unit_id}")
+                total_clashes += 1
+        if total_clashes > 0:
+            new_masterplan.objective_value -= (  # type: ignore
+                total_clashes * objectives.weight)  # type: ignore
+            session.commit()
 
         ot_id, day_id = assign_ot_id_and_day_id(
             session=session,
