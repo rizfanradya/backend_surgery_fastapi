@@ -239,7 +239,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
     for table in truncate_tables:
         session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
     for table in truncate_tables:
-        session.execute(text(f'TRUNCATE TABLE {table}'))
+        session.execute(
+            text(f'TRUNCATE TABLE {table} RESTART IDENTITY CASCADE'))
     for table in truncate_tables:
         session.execute(text(f'ALTER TABLE {table} ENABLE TRIGGER ALL'))
     session.commit()
