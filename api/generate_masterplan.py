@@ -428,9 +428,7 @@ def generate_masterplan(
         send_error_response(str(error), 'Failed to save file')
 
     procedure_names = session.query(ProcedureName).all()
-    units = session.query(Unit).all()
     procedure_name_map = {p.name: p.id for p in procedure_names}
-    unit_name_map = {u.name: u.id for u in units}
 
     clashing_subspecialties = session.query(ClashingSubSpecialties).all()
     clashing_group_map = {}
@@ -452,92 +450,64 @@ def generate_masterplan(
             'objective clashing subspecialties not found in database.'
         )
 
-    for row_idx, row in enumerate(
-        sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
-        start=2
-    ):
-        booking_date = datetime.now()
-        try:
-            booking_date = parse_date(row[0])
-        except ValueError as error:
-            session.delete(new_masterplan)
-            session.commit()
-            send_error_response(
-                f"Invalid date format for booking date: {error}")
-
-        age = 0
-        try:
-            age = int(str(row[3]))
-        except ValueError as error:
-            session.delete(new_masterplan)
-            session.commit()
-            send_error_response(f"Invalid age format: {error}")
-
-        duration = 0
-        try:
-            duration = int(str(row[14]))
-        except ValueError as error:
-            session.delete(new_masterplan)
-            session.commit()
-            send_error_response(f"Invalid duration format: {error}")
-
-        procedure_name = row[13]
-        subspeciality_desc = row[10]
-        if isinstance(procedure_name, str) and "-" in procedure_name:
-            procedure_name = procedure_name.split("-", 1)[-1].strip()
-        procedure_name = f"PROCEDURE - {procedure_name}"
-        procedure_name_id = procedure_name_map.get(
-            procedure_name, 0)  # type: ignore
-
-        unit_id = unit_name_map.get(subspeciality_desc, 0)  # type: ignore
-        if unit_id == 0:
-            continue
-
-        total_clashes = 0
-        for sub_specialty_id, clashing_units in clashing_group_map.items():
-            if unit_id in clashing_units:
-                total_clashes += 1
-        if total_clashes > 0:
-            new_masterplan.objective_value -= (  # type: ignore
-                total_clashes * objectives.weight)  # type: ignore
-            session.commit()
-
-        ot_id, day_id = assign_ot_id_and_day_id(
-            session=session,
-            ot_assignments=ot_assignments
-        )
-        if not ot_id or not day_id:
-            continue
-
-        surgery_schema = SurgerySchema(
-            mssp_id=new_masterplan.id,  # type: ignore
-            mrn=str(row[2]),
-            unit_id=unit_id,
-            booking_date=booking_date,
-            estimated_duration=duration,
-            procedure_name_id=procedure_name_id,
-            age=age,
-            gender_code='P' if isinstance(
-                row[4], str) and row[4].upper() == 'P' else 'L',
-            surgeon=str(row[16])
-        )
-        ot_assignment_schema = OtAssignmentSchema(
-            mssp_id=new_masterplan.id,  # type: ignore
-            mrn=str(row[2]),
-            week_id=1,
-            ot_id=ot_id,
-            unit_id=unit_id,
-            day_id=day_id,
-            is_require_anaes=True if row[8] == 'Y'else False,
-            opening_time=datetime.strptime(
-                '09:00:00.0000', '%H:%M:%S.%f').time(),
-            closing_time=datetime.strptime(
-                '16:00:00.0000', '%H:%M:%S.%f').time()
-        )
-        surgeries.append(Surgery(**surgery_schema.dict()))
-        ot_assignments.append(OtAssignment(**ot_assignment_schema.dict()))
-
     try:
+        for row_idx, row in enumerate(
+            sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
+            start=2
+        ):
+            unit_data = session.query(Unit).where(
+                cast(Unit.name, String).ilike(f"%{row[10]}%")).first()
+
+            ot_id, day_id = assign_ot_id_and_day_id(
+                session=session,
+                ot_assignments=ot_assignments
+            )
+            if not ot_id or not day_id or unit_data is None:
+                continue
+
+            procedure_name = row[13]
+            if isinstance(procedure_name, str) and "-" in procedure_name:
+                procedure_name = procedure_name.split("-", 1)[-1].strip()
+            procedure_name = f"PROCEDURE - {procedure_name}"
+            procedure_name_id = procedure_name_map.get(
+                procedure_name, 0)  # type: ignore
+
+            total_clashes = 0
+            for sub_specialty_id, clashing_units in clashing_group_map.items():
+                if unit_data.id in clashing_units:
+                    total_clashes += 1
+            if total_clashes > 0:
+                new_masterplan.objective_value -= (  # type: ignore
+                    total_clashes * objectives.weight)  # type: ignore
+
+            surgery_schema = SurgerySchema(
+                mssp_id=new_masterplan.id,  # type: ignore
+                mrn=str(row[2]),
+                unit_id=unit_data.id,  # type: ignore
+                booking_date=parse_date(row[0]),
+                estimated_duration=row[14],  # type: ignore
+                procedure_name_id=procedure_name_id,
+                age=row[3],  # type: ignore
+                gender_code='P' if isinstance(
+                    row[4], str) and row[4].upper() == 'P' else 'L',
+                surgeon=row[16]  # type: ignore
+            )
+            ot_assignment_schema = OtAssignmentSchema(
+                mssp_id=new_masterplan.id,  # type: ignore
+                mrn=str(row[2]),
+                week_id=1,
+                ot_id=ot_id,
+                unit_id=unit_data.id,  # type: ignore
+                day_id=day_id,
+                is_require_anaes=True if row[8] == 'Y'else False,
+                opening_time=datetime.strptime(
+                    '09:00:00.0000', '%H:%M:%S.%f').time(),
+                closing_time=datetime.strptime(
+                    '16:00:00.0000', '%H:%M:%S.%f').time()
+            )
+            surgeries.append(Surgery(**surgery_schema.dict()))
+            ot_assignments.append(OtAssignment(**ot_assignment_schema.dict()))
+
         session.add_all(surgeries)
         session.add_all(ot_assignments)
         session.commit()
