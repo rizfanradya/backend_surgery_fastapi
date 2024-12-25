@@ -14,13 +14,19 @@ class SubSpecialtiesOtTypes(Base):
         ForeignKey('sub_specialty.id'),
         nullable=False
     )
+    sub_specialty = relationship(
+        'SubSpecialty',
+        back_populates='sub_specialties_ot_types'
+    )
+    unit_id = Column(
+        Integer,
+        ForeignKey('unit.id'),
+        nullable=False
+    )
+    unit = relationship('Unit', back_populates='sub_specialties_ot_types')
     ot_type_id = Column(
         Integer,
         ForeignKey('ot_type.id'),
         nullable=False
-    )
-    sub_specialty = relationship(
-        'SubSpecialty',
-        back_populates='sub_specialties_ot_types'
     )
     ot_type = relationship('OtType', back_populates='sub_specialties_ot_types')

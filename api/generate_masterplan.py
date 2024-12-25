@@ -303,7 +303,8 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                 if item.value and ot_type_data is not None:
                     new_sub_specialties_ot_types_schema = SubSpecialtiesOtTypesSchema(
                         sub_specialty_id=unit_data.sub_specialty_id,
-                        ot_type_id=item.id
+                        ot_type_id=item.id,
+                        unit_id=unit_data.id
                     )
                     new_sub_specialties_ot_types = SubSpecialtiesOtTypes(
                         **new_sub_specialties_ot_types_schema.dict()

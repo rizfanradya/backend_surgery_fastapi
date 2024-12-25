@@ -5,6 +5,7 @@ from typing import List
 class SubSpecialtiesOtTypesSchema(BaseModel):
     sub_specialty_id: int
     ot_type_id: int
+    unit_id: int
 
 
 class BaseSchema(SubSpecialtiesOtTypesSchema):

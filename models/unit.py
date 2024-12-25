@@ -32,6 +32,10 @@ class Unit(Base):
     ot_assignment = relationship('OtAssignment', back_populates='unit')
     preferred_ot = relationship('PreferredOt', back_populates='unit')
     surgery = relationship('Surgery', back_populates='unit')
+    sub_specialties_ot_types = relationship(
+        'SubSpecialtiesOtTypes',
+        back_populates='unit'
+    )
     clashing_subspecialties = relationship(
         'ClashingSubSpecialties',
         back_populates='unit'
