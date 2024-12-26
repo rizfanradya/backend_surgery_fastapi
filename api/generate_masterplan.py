@@ -477,11 +477,11 @@ def generate_masterplan(
 
             available_ot_ids = []
             if unit_fot is not None:
-                fixed_ot_data = session.query(FixedOt).where(
-                    FixedOt.unit_id == unit_data.id).all()
-                available_ot_ids = [fot.ot_id for fot in fixed_ot_data]
+                available_ot_ids = [fot.ot_id for fot in session.query(
+                    FixedOt).where(FixedOt.unit_id == unit_data.id).all()]
             else:
-                available_ot_ids = []
+                available_ot_ids = [ot[0] for ot in session.query(Ot.id).where(Ot.id.notin_(
+                    {bot.ot_id for bot in session.query(BlockedOt).where(BlockedOt.unit_id == unit_data.id).all()})).all()]
 
             ot_id = None
             day_id = None
