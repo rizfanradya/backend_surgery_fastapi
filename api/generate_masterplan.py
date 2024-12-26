@@ -456,7 +456,6 @@ def generate_masterplan(
         send_error_response(
             'Fixed ot type not found in database.'
         )
-    available_day_ids = session.scalars(session.query(Day.id)).all()
     available_week_ids = session.scalars(session.query(Week.id)).all()
 
     try:
@@ -464,6 +463,8 @@ def generate_masterplan(
             sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
             start=2
         ):
+            available_ot_ids = []
+
             unit_data = session.query(Unit).where(
                 cast(Unit.name, String).ilike(f"%{row[10]}%")).first()
             if unit_data is None:
@@ -475,13 +476,15 @@ def generate_masterplan(
                 SubSpecialtiesOtTypes.ot_type_id == fixed_ot_type.id  # type: ignore
             ).first()
 
-            available_ot_ids = []
             if unit_fot is not None:
                 available_ot_ids = [fot.ot_id for fot in session.query(
                     FixedOt).where(FixedOt.unit_id == unit_data.id).all()]
             else:
                 available_ot_ids = [ot[0] for ot in session.query(Ot.id).where(Ot.id.notin_(
                     {bot.ot_id for bot in session.query(BlockedOt).where(BlockedOt.unit_id == unit_data.id).all()})).all()]
+
+            available_day_ids = [day[0] for day in session.query(Day.id).where(Day.id.notin_(
+                {day.day_id for day in session.query(BlockedDay).where(BlockedDay.unit_id == unit_data.id).all()})).all()]
 
             ot_id = None
             day_id = None
