@@ -6,7 +6,6 @@ from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
-from utils.assign_ot_id_and_day_id import assign_ot_id_and_day_id
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text, cast, String
 from io import BytesIO
@@ -451,6 +450,17 @@ def generate_masterplan(
             'objective clashing subspecialties not found in database.'
         )
 
+    fixed_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%fix%')).first()
+    if fixed_ot_type is None:
+        send_error_response(
+            'Fixed ot type not found in database.'
+        )
+    available_ot_ids = session.scalars(
+        session.query(Ot.id).order_by(Ot.id.desc())).all()
+    available_day_ids = session.scalars(
+        session.query(Day.id).order_by(Day.id.desc())).all()
+
     try:
         for row_idx, row in enumerate(
             sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
@@ -459,12 +469,29 @@ def generate_masterplan(
             unit_data = session.query(Unit).where(
                 cast(Unit.name, String).ilike(f"%{row[10]}%")).first()
 
-            ot_id, day_id = assign_ot_id_and_day_id(
-                session=session,
-                ot_assignments=ot_assignments
-            )
+            ot_id = None
+            day_id = None
+            assigned_ots = {
+                (assignment.ot_id, assignment.day_id)
+                for assignment in ot_assignments
+            }
+            for day_ids in available_day_ids:
+                for ot_ids in available_ot_ids:
+                    if (ot_ids, day_ids) not in assigned_ots:
+                        ot_id = ot_ids
+                        day_id = day_ids
             if not ot_id or not day_id or unit_data is None:
                 continue
+
+            unit_fot = session.query(SubSpecialtiesOtTypes).where(
+                SubSpecialtiesOtTypes.unit_id == unit_data.id,
+                SubSpecialtiesOtTypes.sub_specialty_id == unit_data.sub_specialty_id,
+                SubSpecialtiesOtTypes.ot_type_id == fixed_ot_type.id  # type: ignore
+            ).first()
+            if unit_fot is not None:
+                print('fot')
+            else:
+                print('not fot')
 
             procedure_name = row[13]
             if isinstance(procedure_name, str) and "-" in procedure_name:
