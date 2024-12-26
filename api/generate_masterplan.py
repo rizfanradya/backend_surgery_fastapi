@@ -456,8 +456,8 @@ def generate_masterplan(
         send_error_response(
             'Fixed ot type not found in database.'
         )
-    available_ot_ids = session.scalars(session.query(Ot.id)).all()
     available_day_ids = session.scalars(session.query(Day.id)).all()
+    available_week_ids = session.scalars(session.query(Week.id)).all()
 
     try:
         for row_idx, row in enumerate(
@@ -469,40 +469,52 @@ def generate_masterplan(
             if unit_data is None:
                 continue
 
-            ot_id = None
-            day_id = None
-            daily_ot_counts = {
-                (assignment.day_id, assignment.unit_id): 0
-                for assignment in ot_assignments
-            }
-            assigned_ots = {
-                (assignment.ot_id, assignment.day_id)
-                for assignment in ot_assignments
-            }
-            for assignment in ot_assignments:
-                daily_ot_counts[(assignment.day_id, assignment.unit_id)] += 1
-            for day_ids in available_day_ids:
-                if daily_ot_counts.get(  # type: ignore
-                        (day_ids, unit_data.id), 0) < unit_data.max_slot_limit:
-                    for ot_ids in available_ot_ids:
-                        if (ot_ids, day_ids) not in assigned_ots:
-                            ot_id = ot_ids
-                            day_id = day_ids
-                            break
-                    if ot_id and day_id:
-                        break
-            if not ot_id or not day_id:
-                continue
-
             unit_fot = session.query(SubSpecialtiesOtTypes).where(
                 SubSpecialtiesOtTypes.unit_id == unit_data.id,
                 SubSpecialtiesOtTypes.sub_specialty_id == unit_data.sub_specialty_id,
                 SubSpecialtiesOtTypes.ot_type_id == fixed_ot_type.id  # type: ignore
             ).first()
+
+            available_ot_ids = []
             if unit_fot is not None:
-                print('fot')
+                fixed_ot_data = session.query(FixedOt).where(
+                    FixedOt.unit_id == unit_data.id).all()
+                available_ot_ids = [fot.ot_id for fot in fixed_ot_data]
             else:
-                print('not fot')
+                available_ot_ids = []
+
+            ot_id = None
+            day_id = None
+            week_id = None
+            daily_ot_counts = {
+                (assignment.day_id, assignment.unit_id, assignment.week_id): 0
+                for assignment in ot_assignments
+            }
+            assigned_ots = {
+                (assignment.ot_id, assignment.day_id, assignment.week_id)
+                for assignment in ot_assignments
+            }
+            for assignment in ot_assignments:
+                daily_ot_counts[
+                    (assignment.day_id, assignment.unit_id, assignment.week_id)] += 1
+            for week_ids in available_week_ids:
+                for day_ids in available_day_ids:
+                    if daily_ot_counts.get((day_ids, unit_data.id, week_ids),  # type: ignore
+                                           0) < unit_data.max_slot_limit:
+                        for ot_ids in available_ot_ids:
+                            if (ot_ids, day_ids, week_ids) not in assigned_ots:
+                                ot_id = ot_ids
+                                day_id = day_ids
+                                week_id = week_ids
+                                break
+                        if ot_id and day_id and week_id:  # type: ignore
+                            break
+                    if ot_id and day_id and week_id:  # type: ignore
+                        break
+                if ot_id and day_id and week_id:  # type: ignore
+                    break
+            if not ot_id or not day_id or not week_id:  # type: ignore
+                continue
 
             procedure_name = row[13]
             if isinstance(procedure_name, str) and "-" in procedure_name:
@@ -534,8 +546,8 @@ def generate_masterplan(
             ot_assignment_schema = OtAssignmentSchema(
                 mssp_id=new_masterplan.id,  # type: ignore
                 mrn=str(row[2]),
-                week_id=1,
-                ot_id=ot_id,
+                week_id=week_id,
+                ot_id=ot_id,  # type: ignore
                 unit_id=unit_data.id,  # type: ignore
                 day_id=day_id,
                 is_require_anaes=True if row[8] == 'Y'else False,
@@ -586,7 +598,6 @@ def otassignment(
 
     ot_assignment = ot_assignment.all()
     ot_assignments_map = {}
-    week_ids = set()
 
     for assignment in ot_assignment:
         ot_id = assignment.ot_id  # type: ignore
@@ -599,10 +610,8 @@ def otassignment(
             "time": f"{assignment.opening_time} - {assignment.closing_time}",
             "color_hex": assignment.unit.color_hex
         }
-        week_ids.add(assignment.week_id)
 
-    all_ot_ids = session.query(Ot.id).all()
-    all_ot_ids = [ot_id[0] for ot_id in all_ot_ids]
+    all_ot_ids = [ot_id[0] for ot_id in session.query(Ot.id).all()]
 
     grouped_data = []
     for ot_id in all_ot_ids:
@@ -611,9 +620,12 @@ def otassignment(
             "ot_id": ot_id,
             "week": week_data
         })
-
     grouped_data.sort(key=lambda x: x["ot_id"])
-    weeks = session.query(Week).filter(Week.id.in_(week_ids)).all()
+
+    weeks = session.query(Week).where(
+        Week.id.in_([w[0] for w in session.query(OtAssignment.week_id).distinct().where(
+            OtAssignment.mssp_id == mssp_id
+        ).all()])).order_by(Week.id).all()
 
     return {
         "otassignment": grouped_data,
