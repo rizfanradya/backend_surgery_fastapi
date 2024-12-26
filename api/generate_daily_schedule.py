@@ -97,36 +97,9 @@ def generate_daily_schedule(
     token: str = Depends(TokenAuthorization)
 ):
     check_excell_format(file, session, token)
-    if file.content_type not in [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel"
-    ]:
-        send_error_response('Wrong file type, only accepts xlsx')
 
-    expected_headers = [
-        "BOOKING DATE", "MRN", "AGE", "GENDER", "DIAGNOSIS", "COMMENT",
-        "ANAES_TYPE", "TYPE_OF_OPERATION", "SUB_SPECIALITY_DESC", "SPECIALITY_ID",
-        "PROCEDURE_NAME", "DURATION", "BOOKED_BY", "SURGEON1", "PACU_REQUIRED"
-    ]
-    contents = file.file.read()
-    excel_data = BytesIO(contents)
-    workbook = load_workbook(excel_data)
-    sheet = workbook.active
-    actual_headers = [cell.value for cell in sheet[1]]  # type: ignore
-    for idx, (expected, actual) in enumerate(zip(expected_headers, actual_headers), start=1):
-        if expected != actual:
-            send_error_response(
-                f"Column {idx}: Expected '{expected}', found '{actual}'"
-            )
-
-    start_date_dt = cast(datetime, start_date)
-    end_date_dt = cast(datetime, end_date)
-    try:
-        start_date_dt = parse_date(start_date)
-        end_date_dt = parse_date(end_date)
-    except ValueError as error:
-        send_error_response(
-            f"Invalid date format for start or end date: {error}")
+    start_date_dt = parse_date(start_date)
+    end_date_dt = parse_date(end_date)
 
     if start_date_dt > end_date_dt:  # type: ignore
         send_error_response('Start date cannot be after end date')
@@ -151,23 +124,12 @@ def generate_daily_schedule(
         min_row=2,
         values_only=True
     ), start=2):
-        ot_id_by_mrn = 0
-        try:
-            ot_id_by_mrn = session.query(OtAssignment).where(
-                OtAssignment.mssp_id == master_plan_id,
-                OtAssignment.mrn == str(row[1])
-            ).first()  # type: ignore
-            if ot_id_by_mrn is None:
-                continue
-        except Exception as error:
+        ot_id_by_mrn = session.query(OtAssignment).where(
+            OtAssignment.mssp_id == master_plan_id,
+            OtAssignment.mrn == str(row[1])
+        ).first()  # type: ignore
+        if ot_id_by_mrn is None:
             continue
-
-        age = 0
-        try:
-            age = int(str(row[2]))
-        except ValueError as error:
-            send_error_response(
-                f"Invalid age format at row {row_idx}: {error}")
 
         duration_str = str(row[11])
         duration = 0
@@ -221,7 +183,7 @@ def generate_daily_schedule(
         schedule_result = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
-            age=age,
+            age=row[2],
             week_id=map_day_of_week_to_day_id(str(operation_date), session),
             week_day=operation_date.strftime('%A'),  # type: ignore
             surgery_date=operation_date.date(),  # type: ignore
