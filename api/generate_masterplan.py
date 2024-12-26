@@ -456,10 +456,8 @@ def generate_masterplan(
         send_error_response(
             'Fixed ot type not found in database.'
         )
-    available_ot_ids = session.scalars(
-        session.query(Ot.id).order_by(Ot.id.desc())).all()
-    available_day_ids = session.scalars(
-        session.query(Day.id).order_by(Day.id.desc())).all()
+    available_ot_ids = session.scalars(session.query(Ot.id)).all()
+    available_day_ids = session.scalars(session.query(Day.id)).all()
 
     try:
         for row_idx, row in enumerate(
@@ -468,19 +466,32 @@ def generate_masterplan(
         ):
             unit_data = session.query(Unit).where(
                 cast(Unit.name, String).ilike(f"%{row[10]}%")).first()
+            if unit_data is None:
+                continue
 
             ot_id = None
             day_id = None
+            daily_ot_counts = {
+                (assignment.day_id, assignment.unit_id): 0
+                for assignment in ot_assignments
+            }
             assigned_ots = {
                 (assignment.ot_id, assignment.day_id)
                 for assignment in ot_assignments
             }
+            for assignment in ot_assignments:
+                daily_ot_counts[(assignment.day_id, assignment.unit_id)] += 1
             for day_ids in available_day_ids:
-                for ot_ids in available_ot_ids:
-                    if (ot_ids, day_ids) not in assigned_ots:
-                        ot_id = ot_ids
-                        day_id = day_ids
-            if not ot_id or not day_id or unit_data is None:
+                if daily_ot_counts.get(  # type: ignore
+                        (day_ids, unit_data.id), 0) < unit_data.max_slot_limit:
+                    for ot_ids in available_ot_ids:
+                        if (ot_ids, day_ids) not in assigned_ots:
+                            ot_id = ot_ids
+                            day_id = day_ids
+                            break
+                    if ot_id and day_id:
+                        break
+            if not ot_id or not day_id:
                 continue
 
             unit_fot = session.query(SubSpecialtiesOtTypes).where(
