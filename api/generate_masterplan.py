@@ -45,6 +45,7 @@ from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
 from models.surgery import Surgery
 from models.clashing_subspecialties import ClashingSubSpecialties
+from models.status import Status
 
 router = APIRouter()
 
@@ -456,19 +457,45 @@ def generate_masterplan(
         send_error_response(
             'Fixed ot type not found in database.'
         )
-    available_week_ids = session.scalars(session.query(Week.id)).all()
+
+    general_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%gen%')).first()
+    if general_ot_type is None:
+        send_error_response(
+            'General ot type not found in database.'
+        )
+
+    ult_cln_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%ult%')).first()
+    if ult_cln_ot_type is None:
+        send_error_response(
+            'Ultra Clean ot type not found in database.'
+        )
+
+    status = session.query(Status).where(
+        Status.description.ilike('available')
+    ).first()
+    if status is None:
+        send_error_response(
+            'Status "Available" not found in database.'
+        )
+
+    available_week_ids = session.scalars(session.query(
+        Week.id).where(Week.status_id == status.id)).all()  # type: ignore
 
     try:
         for row_idx, row in enumerate(
             sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
             start=2
         ):
-            available_ot_ids = []
-
             unit_data = session.query(Unit).where(
                 cast(Unit.name, String).ilike(f"%{row[10]}%")).first()
             if unit_data is None:
                 continue
+
+            available_ot_ids = []
+            available_day_ids = [day[0] for day in session.query(Day.id).where(Day.id.notin_(
+                {day.day_id for day in session.query(BlockedDay).where(BlockedDay.unit_id == unit_data.id).all()})).all()]
 
             unit_fot = session.query(SubSpecialtiesOtTypes).where(
                 SubSpecialtiesOtTypes.unit_id == unit_data.id,
@@ -477,14 +504,51 @@ def generate_masterplan(
             ).first()
 
             if unit_fot is not None:
-                available_ot_ids = [fot.ot_id for fot in session.query(
-                    FixedOt).where(FixedOt.unit_id == unit_data.id).all()]
-            else:
-                available_ot_ids = [ot[0] for ot in session.query(Ot.id).where(Ot.id.notin_(
-                    {bot.ot_id for bot in session.query(BlockedOt).where(BlockedOt.unit_id == unit_data.id).all()})).all()]
+                fixed_ot_query = session.query(FixedOt.ot_id).where(
+                    FixedOt.unit_id == unit_data.id
+                )
+                fixed_ot_type_query = session.query(Ot.id).where(
+                    Ot.ot_type_id == fixed_ot_type.id  # type: ignore
+                )
+                available_ot_ids = [ot[0] for ot in fixed_ot_query.union(
+                    fixed_ot_type_query).all()]
 
-            available_day_ids = [day[0] for day in session.query(Day.id).where(Day.id.notin_(
-                {day.day_id for day in session.query(BlockedDay).where(BlockedDay.unit_id == unit_data.id).all()})).all()]
+            else:
+                unit_gen_ot = session.query(SubSpecialtiesOtTypes).where(
+                    SubSpecialtiesOtTypes.unit_id == unit_data.id,
+                    SubSpecialtiesOtTypes.sub_specialty_id == unit_data.sub_specialty_id,
+                    SubSpecialtiesOtTypes.ot_type_id == general_ot_type.id  # type: ignore
+                ).first()
+                unit_ult_cln_ot = session.query(SubSpecialtiesOtTypes).where(
+                    SubSpecialtiesOtTypes.unit_id == unit_data.id,
+                    SubSpecialtiesOtTypes.sub_specialty_id == unit_data.sub_specialty_id,
+                    SubSpecialtiesOtTypes.ot_type_id == ult_cln_ot_type.id  # type: ignore
+                ).first()
+
+                if unit_gen_ot and unit_ult_cln_ot:
+                    available_ot_ids = [ot[0] for ot in session.query(Ot.id).where(
+                        Ot.ot_type_id == general_ot_type.id  # type: ignore
+                    ).intersect(
+                        session.query(Ot.id).where(
+                            Ot.ot_type_id == ult_cln_ot_type.id  # type: ignore
+                        )
+                    ).where(
+                        Ot.id.notin_(
+                            {bot.ot_id for bot in session.query(BlockedOt)
+                                .where(BlockedOt.unit_id == unit_data.id).all()}
+                        )
+                    ).all()]
+                elif unit_gen_ot or unit_ult_cln_ot:
+                    ot_type_id = general_ot_type.id if unit_gen_ot else ult_cln_ot_type.id  # type: ignore
+                    available_ot_ids = [ot[0] for ot in session.query(Ot.id).where(
+                        Ot.ot_type_id == ot_type_id,
+                        Ot.id.notin_(
+                            {bot.ot_id for bot in session.query(BlockedOt)
+                                .where(BlockedOt.unit_id == unit_data.id).all()}
+                        )
+                    ).all()]
+                else:
+                    available_ot_ids = []
 
             ot_id = None
             day_id = None
