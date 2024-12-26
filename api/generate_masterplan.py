@@ -389,6 +389,42 @@ def generate_masterplan(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    objectives = session.query(Objectives).where(
+        cast(Objectives.objectives, String).ilike('%clashing%')).first()
+    if objectives is None:
+        send_error_response(
+            'objective clashing subspecialties not found in database.'
+        )
+
+    fixed_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%fix%')).first()
+    if fixed_ot_type is None:
+        send_error_response(
+            'Fixed ot type not found in database.'
+        )
+
+    general_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%gen%')).first()
+    if general_ot_type is None:
+        send_error_response(
+            'General ot type not found in database.'
+        )
+
+    ult_cln_ot_type = session.query(OtType).where(
+        cast(OtType.description, String).ilike('%ult%')).first()
+    if ult_cln_ot_type is None:
+        send_error_response(
+            'Ultra Clean ot type not found in database.'
+        )
+
+    status = session.query(Status).where(
+        Status.description.ilike('available')
+    ).first()
+    if status is None:
+        send_error_response(
+            'Status "Available" not found in database.'
+        )
+
     check_excell_format(file, session, token)
 
     # start_date_dt = parse_date(start_date)
@@ -443,42 +479,6 @@ def generate_masterplan(
     sheet = workbook.active
     surgeries = []
     ot_assignments = []
-
-    objectives = session.query(Objectives).where(
-        cast(Objectives.objectives, String).ilike('%clashing%')).first()
-    if objectives is None:
-        send_error_response(
-            'objective clashing subspecialties not found in database.'
-        )
-
-    fixed_ot_type = session.query(OtType).where(
-        cast(OtType.description, String).ilike('%fix%')).first()
-    if fixed_ot_type is None:
-        send_error_response(
-            'Fixed ot type not found in database.'
-        )
-
-    general_ot_type = session.query(OtType).where(
-        cast(OtType.description, String).ilike('%gen%')).first()
-    if general_ot_type is None:
-        send_error_response(
-            'General ot type not found in database.'
-        )
-
-    ult_cln_ot_type = session.query(OtType).where(
-        cast(OtType.description, String).ilike('%ult%')).first()
-    if ult_cln_ot_type is None:
-        send_error_response(
-            'Ultra Clean ot type not found in database.'
-        )
-
-    status = session.query(Status).where(
-        Status.description.ilike('available')
-    ).first()
-    if status is None:
-        send_error_response(
-            'Status "Available" not found in database.'
-        )
 
     available_week_ids = session.scalars(session.query(
         Week.id).where(Week.status_id == status.id)).all()  # type: ignore
