@@ -97,6 +97,10 @@ def generate_daily_schedule(
     token: str = Depends(TokenAuthorization)
 ):
     check_excell_format(file, session, token)
+    contents = file.file.read()
+    excel_data = BytesIO(contents)
+    workbook = load_workbook(excel_data)
+    sheet = workbook.active
 
     start_date_dt = parse_date(start_date)
     end_date_dt = parse_date(end_date)
@@ -124,42 +128,31 @@ def generate_daily_schedule(
         min_row=2,
         values_only=True
     ), start=2):
-        ot_id_by_mrn = session.query(OtAssignment).where(
+        ot_assignment = session.query(OtAssignment).where(
             OtAssignment.mssp_id == master_plan_id,
             OtAssignment.mrn == str(row[1])
         ).first()  # type: ignore
-        if ot_id_by_mrn is None:
+        if ot_assignment is None:
             continue
 
         duration_str = str(row[11])
-        duration = 0
         if not duration_str.isdigit() or len(duration_str) != 4:
             send_error_response(
                 f"Invalid duration format at row {row_idx}, expected HHMM")
-        try:
-            duration_hours = int(duration_str[:2])
-            duration_minutes = int(duration_str[2:])
-            if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
-                raise ValueError("Duration out of valid range")
-            duration = duration_hours * 60 + duration_minutes
-        except ValueError as error:
-            send_error_response(
-                f"Invalid duration format or value at row {row_idx}: {error}")
+        duration_hours = int(duration_str[:2])
+        duration_minutes = int(duration_str[2:])
+        if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
+            send_error_response("Duration out of valid range")
+        duration = duration_hours * 60 + duration_minutes
 
         operation_date: dt_datetime = next(operation_date_cycle)
-
-        ot_assignment = session.query(OtAssignment).where(
-            OtAssignment.mssp_id == master_plan_id
-        ).first()
-        if ot_assignment is None:
-            continue
 
         procedure_name = row[10]
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        ot_id: int = ot_id_by_mrn.ot_id  # type: ignore
+        ot_id: int = ot_assignment.ot_id  # type: ignore
         ot_start_time = last_end_time[ot_id][operation_date]
         ot_start_datetime = datetime.combine(
             operation_date, ot_start_time)  # type: ignore
@@ -183,10 +176,10 @@ def generate_daily_schedule(
         schedule_result = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
-            age=row[2],
+            age=row[2],  # type: ignore
             week_id=map_day_of_week_to_day_id(str(operation_date), session),
-            week_day=operation_date.strftime('%A'),  # type: ignore
-            surgery_date=operation_date.date(),  # type: ignore
+            week_day=operation_date.strftime('%A'),
+            surgery_date=operation_date.date(),
             type_of_surgery=str(row[7]),
             sub_specialty_desc=str(row[8]),
             specialty_id=str(row[9]),
@@ -211,6 +204,7 @@ def generate_daily_schedule(
         )
         schedule_results.append(ScheduleResults(**schedule_result.dict()))
 
+    file.file.seek(0)
     try:
         session.add_all(schedule_results)
         session.commit()
