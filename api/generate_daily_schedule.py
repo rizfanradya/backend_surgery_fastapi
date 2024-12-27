@@ -32,46 +32,59 @@ router = APIRouter()
 def schedule_results_and_filter(
     surgery_date: dt_datetime,
     ot_id: Optional[int] = None,
-    subspecialty_desc: Optional[str] = None,
+    subspecialty_id: Optional[str] = None,
     limit: int = 10,
     offset: int = 0,
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    schedule_results = session.query(ScheduleResults).where(
-        ScheduleResults.surgery_date == surgery_date)
+    schedule_results = session.query(
+        ScheduleResults,
+        ProcedureName.sub_specialty_id,
+        SubSpecialty.color_hex,
+        SubSpecialty.description.label('sub_specialty_desc')
+    ).join(
+        ProcedureName, ProcedureName.name == ScheduleResults.procedure_name
+    ).join(
+        SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
+    ).where(
+        ScheduleResults.surgery_date == surgery_date
+    )
 
     if ot_id:
         schedule_results = schedule_results.where(
-            ScheduleResults.ot_id == ot_id)
-    if subspecialty_desc:
+            ScheduleResults.ot_id == ot_id
+        )
+    if subspecialty_id:
         schedule_results = schedule_results.where(
-            ScheduleResults.sub_specialty_desc == subspecialty_desc)
+            SubSpecialty.id == subspecialty_id)
 
     total = schedule_results.count()
     schedule_results = schedule_results.limit(limit).offset(offset).all()
     ot_data = session.query(Ot).all()
     subspecialties = session.query(SubSpecialty).all()
-    # subspecialty_colors = session.query(Unit).all()
     color_map = {sub.description: sub.color_hex for sub in subspecialties}
 
     ot_data_count = {}
-    for result in schedule_results:
+    for result, _, _, _ in schedule_results:
         ot_data_count[result.ot_id] = ot_data_count.get(result.ot_id, 0) + 1
 
     for ot in ot_data:
         count = ot_data_count.get(ot.id, 0)
         ot.category = f"OT {ot.id}\n{count} Surgeries"
 
-    for result in schedule_results:
+    formatted_results = []
+    for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
         get_odc = ot_data_count.get(result.ot_id, 0)
         result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
         result.task = f"MRN-{result.mrn}"
-        result.color = color_map.get(result.sub_specialty_desc, "")
+        result.color = color_hex or color_map.get(sub_specialty_desc, "")
+        result.sub_specialty_desc = sub_specialty_desc
+        formatted_results.append(result)
 
     return {
         "total": total,
-        "data": schedule_results,
+        "data": formatted_results,
         "ot": ot_data,
         "subspecialty_filter": subspecialties,
         "subspecialty_colors": subspecialties,
@@ -138,7 +151,7 @@ def generate_daily_schedule(
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
             send_error_response(
-                f"Invalid duration format at row {row_idx}, expected HHMM")
+                f"Invalid duration format at row {row_idx}")
         duration_hours = int(duration_str[:2])
         duration_minutes = int(duration_str[2:])
         if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
