@@ -29,6 +29,7 @@ import api.surgery as surgery
 import api.schedule_results as schedule_results
 import api.role as role
 import api.clashing_subspecialties as clashing_subspecialties
+import api.schedule_resource as schedule_resource
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -59,6 +60,7 @@ routers = [
     (schedule_results.router, "Schedule Results API", "/api"),
     (clashing_subspecialties.router, "Clashing Sub Specialties API", "/api"),
     (equipment_requirement.router, "Equipment Requirement API", "/api"),
+    (schedule_resource.router, "Schedule Resource API", "/api"),
     (
         equipment_requirement_status.router,
         "Equipment Requirement Status API",

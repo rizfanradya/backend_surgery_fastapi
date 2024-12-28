@@ -14,9 +14,11 @@ from itertools import cycle
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
+import json
 from sqlalchemy import func
 from typing import List, Optional
 from schemas.schedule_results import ScheduleResultsSchema
+from schemas.generate_daily_schedule import ScheduleResourceSchema
 from models.masterplan import Masterplan
 from models.ot_assignment import OtAssignment
 from models.schedule_results import ScheduleResults
@@ -24,6 +26,7 @@ from models.ot import Ot
 from models.sub_specialty import SubSpecialty
 from models.unit import Unit
 from models.procedure_name import ProcedureName
+from models.schedule_resource import ScheduleResource
 
 router = APIRouter()
 
@@ -103,12 +106,27 @@ def surgery_details(mrn: str, session: Session = Depends(get_db), token: str = D
 @router.post('/generate')
 def generate_daily_schedule(
     file: UploadFile = File(...),
-    master_plan_id: int = Form(...),
+    master_plan_id: str = Form(...),
     start_date: dt_datetime = Form(...),
     end_date: dt_datetime = Form(...),
+    resource: str = Form(...),
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    try:
+        resources = [
+            ScheduleResourceSchema(**item)for item in json.loads(resource)]
+        resource_map = {r.id: r for r in session.query(ScheduleResource).filter(
+            ScheduleResource.id.in_([item.id for item in resources])).all()}
+        for item in resources:
+            if item.id in resource_map:
+                for key, value in item.dict().items():
+                    if value is not None:
+                        setattr(resource_map[item.id], key, value)
+        session.commit()
+    except Exception:
+        pass
+
     check_excell_format(file, session, token)
     contents = file.file.read()
     excel_data = BytesIO(contents)

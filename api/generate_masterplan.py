@@ -46,6 +46,7 @@ from models.equipment import Equipment
 from models.surgery import Surgery
 from models.clashing_subspecialties import ClashingSubSpecialties
 from models.status import Status
+from models.schedule_resource import ScheduleResource
 
 router = APIRouter()
 
@@ -79,6 +80,7 @@ def masterplan(
     query = query.offset(offset).limit(limit).all()  # type: ignore
     return {
         "total": total,
+        "schedule_resource": session.query(ScheduleResource).order_by(ScheduleResource.id.asc()).all(),
         "data": query
     }
 
