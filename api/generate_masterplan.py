@@ -429,9 +429,6 @@ def generate_masterplan(
 
     check_excell_format(file, session, token)
 
-    # start_date_dt = parse_date(start_date)
-    # end_date_dt = parse_date(end_date)
-
     total_weight, num_objectives = session.query(
         func.sum(Objectives.weight),
         func.count(Objectives.id)
@@ -442,7 +439,9 @@ def generate_masterplan(
         wib_timezone).strftime('%Y-%m-%d %H:%M:%S')
 
     new_masterplan_schema = MasterPlanSchema(
-        objective_value=average_weight_obj  # type: ignore
+        objective_value=average_weight_obj,  # type: ignore
+        start_date=start_date,
+        end_date=end_date
     )
     new_masterplan = Masterplan(**new_masterplan_schema.dict())
     session.add(new_masterplan)

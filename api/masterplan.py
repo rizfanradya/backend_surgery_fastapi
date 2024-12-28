@@ -72,7 +72,7 @@ def delete_masterplan(id: int, session: Session = Depends(get_db), token: str = 
                 session.delete(ota)
             session.delete(data)
             session.commit()
-            if data.uplaoded_file is not None:
+            if data.uploaded_file is not None:
                 abs_path = os.path.abspath(__file__)
                 base_dir = os.path.dirname(os.path.dirname(abs_path))
                 upload_dir = os.path.join(base_dir, 'uploads')

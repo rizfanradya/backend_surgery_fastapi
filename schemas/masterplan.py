@@ -1,11 +1,14 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
+from datetime import date
 
 
 class MasterPlanSchema(BaseModel):
     description: Optional[str] = None
     objective_value: Decimal
+    start_date: date
+    end_date: date
 
 
 class BaseSchema(MasterPlanSchema):
