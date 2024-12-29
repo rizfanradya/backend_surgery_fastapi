@@ -118,14 +118,16 @@ def schedule_results_and_filter(
     weeks = session.query(Week).where(
         Week.id.in_(week_list)).order_by(Week.id).all()
     all_weeks = session.query(Week).order_by(Week.id.asc()).all()
+    all_days = session.query(Day).order_by(Day.id.asc()).all()
 
     return {
         "total": total,
-        "data": formatted_results,
+        "schedule": formatted_results,
         "subspecialty": subspecialties,
         "surgeon_name_list": surgeon_name_list,
         "weeks": weeks,
         "all_weeks": all_weeks,
+        "all_days": all_days,
         "ot": ot_data,
     }
 

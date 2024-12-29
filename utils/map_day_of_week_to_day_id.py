@@ -8,11 +8,11 @@ def map_day_of_week_to_day_id(date: str, session: Session) -> int:
     parsed_date = parse_date(date)
     day_of_week = parsed_date.weekday()
     day_mapping = {
-        0: 'Mon',
-        1: 'Tue',
-        2: 'Wed',
-        3: 'Thu',
-        4: 'Fri'
+        0: 'Monday',
+        1: 'Tuesday',
+        2: 'Wednesday',
+        3: 'Thursday',
+        4: 'Friday'
     }
     day_name = day_mapping.get(day_of_week, 'Unknown')
     if day_name == 'Unknown':
