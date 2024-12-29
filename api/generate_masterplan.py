@@ -644,6 +644,7 @@ def otassignment(
     ot_id: Optional[int] = None,
     unit_id: Optional[int] = None,
     week_id: Optional[int] = None,
+    type: Literal['weekly', 'all_weeks'] = 'all_weeks',
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
@@ -660,35 +661,45 @@ def otassignment(
     if unit_id:
         ot_assignment = ot_assignment.where(
             OtAssignment.unit_id == unit_id)
-    if week_id:
+    if week_id and type == 'weekly':
         ot_assignment = ot_assignment.where(
             OtAssignment.week_id == week_id)
 
     ot_assignment = ot_assignment.all()
     ot_assignments_map = {}
+    all_ot_ids = [
+        ot.id for ot in session.query(Ot).order_by(Ot.id.asc()).all()]
 
     for assignment in ot_assignment:
+        week_id = assignment.week_id  # type: ignore
         ot_id = assignment.ot_id  # type: ignore
         day_name = assignment.day.name.lower()
-        if ot_id not in ot_assignments_map:
-            ot_assignments_map[ot_id] = {}
-        ot_assignments_map[ot_id][day_name] = {
+
+        if week_id not in ot_assignments_map:
+            ot_assignments_map[week_id] = {}
+        if ot_id not in ot_assignments_map[week_id]:
+            ot_assignments_map[week_id][ot_id] = {}
+
+        ot_assignments_map[week_id][ot_id][day_name] = {
             "unit_name": assignment.unit.name,
             "is_require_anaes": assignment.is_require_anaes,
             "time": f"{assignment.opening_time} - {assignment.closing_time}",
             "color_hex": assignment.unit.color_hex
         }
 
-    all_ot_ids = [ot_id[0] for ot_id in session.query(Ot.id).all()]
-
     grouped_data = []
-    for ot_id in all_ot_ids:
-        week_data = ot_assignments_map.get(ot_id, {})
+    for week_id, ot_data in ot_assignments_map.items():
+        data = []
+        for ot_id in all_ot_ids:  # type: ignore
+            week = ot_data.get(ot_id, {})
+            data.append({
+                "ot_id": ot_id,
+                "week": week
+            })
         grouped_data.append({
-            "ot_id": ot_id,
-            "week": week_data
+            "week": week_id,
+            "data": data
         })
-    grouped_data.sort(key=lambda x: x["ot_id"])
 
     weeks = session.query(Week).where(
         Week.id.in_([w[0] for w in session.query(OtAssignment.week_id).distinct().where(
