@@ -16,7 +16,7 @@ from pandas import DataFrame
 from io import BytesIO
 import json
 from sqlalchemy import func, cast, String
-from typing import List, Optional
+from typing import List, Optional, Literal
 from schemas.schedule_results import ScheduleResultsSchema
 from schemas.generate_daily_schedule import ScheduleResourceSchema
 from models.masterplan import Masterplan
@@ -27,6 +27,7 @@ from models.sub_specialty import SubSpecialty
 from models.unit import Unit
 from models.procedure_name import ProcedureName
 from models.schedule_resource import ScheduleResource
+from models.week import Week
 
 router = APIRouter()
 
@@ -35,6 +36,8 @@ router = APIRouter()
 def schedule_results_and_filter(
     surgery_date: dt_datetime,
     ot_id: Optional[int] = None,
+    week_id: Optional[int] = None,
+    type: Literal['timeline', 'weekly', 'all_weeks'] = 'timeline',
     subspecialty_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
     patient_name: Optional[str] = None,
@@ -77,6 +80,16 @@ def schedule_results_and_filter(
             ScheduleResults.surgeon_name == surgeon_name
         )
 
+    week_list = [
+        result.week_id for result, *_ in schedule_results.distinct(
+            ScheduleResults.week_id
+        ).all()
+    ]
+    if week_id and type != 'all_weeks':
+        schedule_results = schedule_results.where(
+            ScheduleResults.week_id == week_id
+        )
+
     total = schedule_results.count()
     schedule_results = schedule_results.limit(limit).offset(offset).all()
     ot_data = session.query(Ot).order_by(Ot.id.asc()).all()
@@ -101,12 +114,16 @@ def schedule_results_and_filter(
         result.sub_specialty_desc = sub_specialty_desc
         formatted_results.append(result)
 
+    weeks = session.query(Week).where(
+        Week.id.in_(week_list)).order_by(Week.id).all()
+
     return {
         "total": total,
         "data": formatted_results,
         "ot": ot_data,
         "subspecialty": subspecialties,
-        "surgeon_name_list": surgeon_name_list
+        "surgeon_name_list": surgeon_name_list,
+        "weeks": weeks
     }
 
 
