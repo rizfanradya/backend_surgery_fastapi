@@ -5,7 +5,7 @@ import os
 load_dotenv()
 
 MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2mb
-ACCESS_TOKEN_EXPIRE_MINUTES = 360  # 360 minutes or 6 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 8 * 60  # 8 hours
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 ALGORITHM = "HS256"
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')

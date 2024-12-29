@@ -22,6 +22,7 @@ class ScheduleResultsSchema(BaseModel):
     ot_start_time: time
     ot_end_time: time
     surgeon_name: str
+    booked_by: str
     post_op_id: int
     post_op_start_time: time
     post_op_end_time: time

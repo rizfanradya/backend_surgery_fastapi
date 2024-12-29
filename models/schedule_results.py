@@ -25,6 +25,7 @@ class ScheduleResults(Base):
     ot_start_time = Column(Time, nullable=False)
     ot_end_time = Column(Time, nullable=False)
     surgeon_name = Column(Text, nullable=False)
+    booked_by = Column(Text)
     post_op_id = Column(Integer, nullable=False)
     post_op_start_time = Column(Time, nullable=False)
     post_op_end_time = Column(Time, nullable=False)

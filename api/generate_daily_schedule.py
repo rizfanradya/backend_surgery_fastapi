@@ -217,6 +217,7 @@ def generate_daily_schedule(
             ot_start_time=phu_end_time.time(),
             ot_end_time=ot_end_datetime.time(),
             surgeon_name=str(row[13]),
+            booked_by=str(row[12]),
             post_op_id=ot_assignment.unit_id,  # type: ignore
             post_op_start_time=post_op_start_time,
             post_op_end_time=post_op_end_time,
