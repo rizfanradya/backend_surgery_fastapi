@@ -114,6 +114,7 @@ def schedule_results_and_filter(
         for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
             get_odc = ot_data_count.get(result.ot_id, 0)
             result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
+            result.surgeries = get_odc
             result.task = f"MRN-{result.mrn}"
             result.color = color_hex or color_map.get(sub_specialty_desc, "")
             result.sub_specialty_desc = sub_specialty_desc
@@ -123,6 +124,7 @@ def schedule_results_and_filter(
         for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
             get_odc = ot_data_count.get(result.ot_id, 0)
             result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
+            result.surgeries = get_odc
             result.task = f"MRN-{result.mrn}"
             result.color = color_hex or color_map.get(sub_specialty_desc, "")
             result.sub_specialty_desc = sub_specialty_desc
