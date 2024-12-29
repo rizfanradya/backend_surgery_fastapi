@@ -15,7 +15,7 @@ from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 import json
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 from typing import List, Optional
 from schemas.schedule_results import ScheduleResultsSchema
 from schemas.generate_daily_schedule import ScheduleResourceSchema
@@ -36,6 +36,8 @@ def schedule_results_and_filter(
     surgery_date: dt_datetime,
     ot_id: Optional[int] = None,
     subspecialty_id: Optional[str] = None,
+    surgeon_name: Optional[str] = None,
+    patient_name: Optional[str] = None,
     limit: int = 10,
     offset: int = 0,
     session: Session = Depends(get_db),
@@ -61,11 +63,25 @@ def schedule_results_and_filter(
     if subspecialty_id:
         schedule_results = schedule_results.where(
             SubSpecialty.id == subspecialty_id)
+    if patient_name:
+        schedule_results = schedule_results.where(
+            cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
+
+    surgeon_name_list = [
+        result.surgeon_name for result, *_ in schedule_results.distinct(
+            ScheduleResults.surgeon_name
+        ).all()
+    ]
+    if surgeon_name:
+        schedule_results = schedule_results.where(
+            ScheduleResults.surgeon_name == surgeon_name
+        )
 
     total = schedule_results.count()
     schedule_results = schedule_results.limit(limit).offset(offset).all()
-    ot_data = session.query(Ot).all()
-    subspecialties = session.query(SubSpecialty).all()
+    ot_data = session.query(Ot).order_by(Ot.id.asc()).all()
+    subspecialties = session.query(SubSpecialty).order_by(
+        SubSpecialty.id.asc()).all()
     color_map = {sub.description: sub.color_hex for sub in subspecialties}
 
     ot_data_count = {}
@@ -89,8 +105,8 @@ def schedule_results_and_filter(
         "total": total,
         "data": formatted_results,
         "ot": ot_data,
-        "subspecialty_filter": subspecialties,
-        "subspecialty_colors": subspecialties,
+        "subspecialty": subspecialties,
+        "surgeon_name_list": surgeon_name_list
     }
 
 
