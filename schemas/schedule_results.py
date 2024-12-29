@@ -8,7 +8,7 @@ class ScheduleResultsSchema(BaseModel):
     mrn: str
     age: int
     week_id: int
-    week_day: str
+    day_id: int
     surgery_date: date
     type_of_surgery: str
     sub_specialty_desc: str

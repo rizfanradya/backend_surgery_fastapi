@@ -705,11 +705,13 @@ def otassignment(
         Week.id.in_([w[0] for w in session.query(OtAssignment.week_id).distinct().where(
             OtAssignment.mssp_id == mssp_id
         ).all()])).order_by(Week.id).all()
+    days = session.query(Day).order_by(Day.id.asc()).all()
 
     return {
         "otassignment": grouped_data,
         "masterPlan": masterplan,
-        "weeks": weeks
+        "weeks": weeks,
+        "days": days
     }
 
 

@@ -1,6 +1,8 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Text, Date, Time
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
 
 
 class ScheduleResults(Base):
@@ -11,7 +13,6 @@ class ScheduleResults(Base):
     mrn = Column(Text, nullable=False)
     age = Column(Integer, nullable=False)
     week_id = Column(Integer, nullable=False)
-    week_day = Column(String(length=255), nullable=False)
     surgery_date = Column(Date, nullable=False)
     type_of_surgery = Column(Text, nullable=False)
     sub_specialty_desc = Column(Text, nullable=False)
@@ -35,3 +36,5 @@ class ScheduleResults(Base):
     icu_id = Column(Integer, nullable=False)
     icu_start_time = Column(Time, nullable=False)
     icu_end_time = Column(Time, nullable=False)
+    day_id = Column(Integer, ForeignKey('day.id'), nullable=False)
+    day = relationship('Day', back_populates='schedule_results')

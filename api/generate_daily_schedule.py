@@ -28,6 +28,7 @@ from models.unit import Unit
 from models.procedure_name import ProcedureName
 from models.schedule_resource import ScheduleResource
 from models.week import Week
+from models.day import Day
 
 router = APIRouter()
 
@@ -233,12 +234,20 @@ def generate_daily_schedule(
         pacu_end_time = add_duration(post_op_end_time.strftime("%H:%M"), 60)
         icu_end_time = add_duration(pacu_end_time.strftime("%H:%M"), 240)
 
+        day_name = operation_date.strftime('%A')
+        day_info = session.query(Day).where(
+            cast(Day.name, String).ilike(f'%{day_name}%')).first()
+        if day_info is None:
+            send_error_response(
+                f'day {day_name} not found in database.'
+            )
+
         schedule_result = ScheduleResultsSchema(
             run_id=run_id,
             mrn=str(row[1]),
             age=row[2],  # type: ignore
             week_id=map_day_of_week_to_day_id(str(operation_date), session),
-            week_day=operation_date.strftime('%A'),
+            day_id=day_info.id,  # type: ignore
             surgery_date=operation_date.date(),
             type_of_surgery=str(row[7]),
             sub_specialty_desc=str(row[8]),

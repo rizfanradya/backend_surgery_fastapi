@@ -14,3 +14,4 @@ class Day(Base):
     week = relationship('Week', back_populates='day')
     blocked_day = relationship('BlockedDay', back_populates='day')
     ot_assignment = relationship('OtAssignment', back_populates='day')
+    schedule_results = relationship('ScheduleResults', back_populates='day')
