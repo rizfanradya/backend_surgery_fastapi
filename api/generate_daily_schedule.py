@@ -47,6 +47,9 @@ def schedule_results_and_filter(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    if type == 'weekly' and week_id is None:
+        send_error_response('Week ID cannot be empty')
+
     schedule_results = session.query(
         ScheduleResults,
         ProcedureName.sub_specialty_id,
@@ -107,13 +110,35 @@ def schedule_results_and_filter(
         ot.category = f"OT {ot.id}\n{count} Surgeries"
 
     formatted_results = []
-    for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
-        get_odc = ot_data_count.get(result.ot_id, 0)
-        result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
-        result.task = f"MRN-{result.mrn}"
-        result.color = color_hex or color_map.get(sub_specialty_desc, "")
-        result.sub_specialty_desc = sub_specialty_desc
-        formatted_results.append(result)
+    if type != 'timeline':
+        schedule_by_week = {}
+        for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
+            get_odc = ot_data_count.get(result.ot_id, 0)
+            result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
+            result.task = f"MRN-{result.mrn}"
+            result.color = color_hex or color_map.get(sub_specialty_desc, "")
+            result.sub_specialty_desc = sub_specialty_desc
+
+            week = result.week_id
+            if week not in schedule_by_week:
+                schedule_by_week[week] = []
+
+            schedule_by_week[week].append(result)
+
+        for week, results in schedule_by_week.items():
+            for res in results:
+                formatted_results.append({
+                    "week": week,
+                    "data": res
+                })
+    else:
+        for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
+            get_odc = ot_data_count.get(result.ot_id, 0)
+            result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
+            result.task = f"MRN-{result.mrn}"
+            result.color = color_hex or color_map.get(sub_specialty_desc, "")
+            result.sub_specialty_desc = sub_specialty_desc
+            formatted_results.append(result)
 
     weeks = session.query(Week).where(
         Week.id.in_(week_list)).order_by(Week.id).all()
