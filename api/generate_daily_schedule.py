@@ -29,6 +29,7 @@ from models.procedure_name import ProcedureName
 from models.schedule_resource import ScheduleResource
 from models.week import Week
 from models.day import Day
+from models.status import Status
 
 router = APIRouter()
 
@@ -187,6 +188,14 @@ def generate_daily_schedule(
     except Exception:
         pass
 
+    status = session.query(Status).where(
+        Status.description.ilike('available')
+    ).first()
+    if status is None:
+        send_error_response(
+            'Status "Available" not found in database.'
+        )
+
     check_excell_format(file, session, token)
     contents = file.file.read()
     excel_data = BytesIO(contents)
@@ -196,15 +205,14 @@ def generate_daily_schedule(
     start_date_dt = parse_date(start_date)
     end_date_dt = parse_date(end_date)
 
-    if start_date_dt > end_date_dt:  # type: ignore
+    if start_date_dt > end_date_dt:
         send_error_response('Start date cannot be after end date')
 
     operation_dates = [
-        start_date_dt + timedelta(days=i)  # type: ignore
-        for i in range((end_date_dt - start_date_dt).days + 1)  # type: ignore
+        start_date_dt + timedelta(days=i)
+        for i in range((end_date_dt - start_date_dt).days + 1)
         if (start_date_dt + timedelta(days=i)).weekday() < 5
     ]
-    operation_date_cycle = cycle(operation_dates)
 
     master_plan = session.query(Masterplan).where(
         Masterplan.id == master_plan_id).first()
@@ -215,6 +223,10 @@ def generate_daily_schedule(
     schedule_results: List[ScheduleResults] = []
     last_end_time = defaultdict(lambda: defaultdict(lambda: time(8, 0)))
 
+    available_week_days = session.query(Week.id, Day.id).filter(
+        Week.status_id == status.id  # type: ignore
+    ).all()
+
     for row_idx, row in enumerate(sheet.iter_rows(  # type: ignore
         min_row=2,
         values_only=True
@@ -222,7 +234,7 @@ def generate_daily_schedule(
         ot_assignment = session.query(OtAssignment).where(
             OtAssignment.mssp_id == master_plan_id,
             OtAssignment.mrn == str(row[1])
-        ).first()  # type: ignore
+        ).first()
         if ot_assignment is None:
             continue
 
@@ -236,67 +248,69 @@ def generate_daily_schedule(
             send_error_response("Duration out of valid range")
         duration = duration_hours * 60 + duration_minutes
 
-        operation_date: dt_datetime = next(operation_date_cycle)
-
         procedure_name = row[10]
         if isinstance(procedure_name, str) and "-" in procedure_name:
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        ot_id: int = ot_assignment.ot_id  # type: ignore
-        ot_start_time = last_end_time[ot_id][operation_date]
-        ot_start_datetime = datetime.combine(
-            operation_date, ot_start_time)  # type: ignore
-        phu_end_time = ot_start_datetime + timedelta(minutes=60)
-        ot_end_datetime = phu_end_time + timedelta(minutes=duration)
-        last_end_time[ot_id][operation_date] = ot_end_datetime.time()
+        for operation_date in operation_dates:
+            for week_id, day_id in available_week_days:
+                ot_id = session.query(Ot.id).filter(
+                    Ot.id == ot_assignment.ot_id
+                ).scalar()
+                if ot_id:
+                    ot_start_time = last_end_time[ot_id][operation_date]
+                    ot_start_datetime = datetime.combine(
+                        operation_date, ot_start_time)
+                    phu_end_time = ot_start_datetime + \
+                        timedelta(minutes=60)
+                    ot_end_datetime = phu_end_time + \
+                        timedelta(minutes=duration)
+                    if ot_end_datetime.time() > time(16, 0):
+                        continue
 
-        post_op_start_time = ot_end_datetime.time()
-        post_op_end_time = add_duration(
-            post_op_start_time.strftime("%H:%M"), 30)
+                    last_end_time[ot_id][operation_date] = ot_end_datetime.time()
 
-        pacu_end_time = add_duration(post_op_end_time.strftime("%H:%M"), 60)
-        icu_end_time = add_duration(pacu_end_time.strftime("%H:%M"), 240)
-
-        day_name = operation_date.strftime('%A')
-        day_info = session.query(Day).where(
-            cast(Day.name, String).ilike(f'%{day_name}%')).first()
-        if day_info is None:
-            send_error_response(
-                f'day {day_name} not found in database.'
-            )
-
-        schedule_result = ScheduleResultsSchema(
-            run_id=run_id,
-            mrn=str(row[1]),
-            age=row[2],  # type: ignore
-            week_id=map_day_of_week_to_day_id(str(operation_date), session),
-            day_id=day_info.id,  # type: ignore
-            surgery_date=operation_date.date(),
-            type_of_surgery=str(row[7]),
-            sub_specialty_desc=str(row[8]),
-            specialty_id=str(row[9]),
-            procedure_name=procedure_name,
-            surgery_duration=duration,
-            phu_id=ot_assignment.unit_id,  # type: ignore
-            phu_start_time=ot_start_datetime.time(),
-            phu_end_time=phu_end_time.time(),
-            ot_id=ot_id,  # type: ignore
-            ot_start_time=phu_end_time.time(),
-            ot_end_time=ot_end_datetime.time(),
-            surgeon_name=str(row[13]),
-            booked_by=str(row[12]),
-            post_op_id=ot_assignment.unit_id,  # type: ignore
-            post_op_start_time=post_op_start_time,
-            post_op_end_time=post_op_end_time,
-            pacu_id=ot_assignment.unit_id,  # type: ignore
-            pacu_start_time=post_op_start_time,
-            pacu_end_time=pacu_end_time,
-            icu_id=ot_assignment.unit_id,  # type: ignore
-            icu_start_time=pacu_end_time,
-            icu_end_time=icu_end_time
-        )
-        schedule_results.append(ScheduleResults(**schedule_result.dict()))
+                    schedule_result = ScheduleResultsSchema(
+                        run_id=run_id,
+                        mrn=str(row[1]),
+                        age=row[2],  # type: ignore
+                        week_id=week_id,
+                        day_id=day_id,
+                        surgery_date=operation_date.date(),
+                        type_of_surgery=str(row[7]),
+                        sub_specialty_desc=str(row[8]),
+                        specialty_id=str(row[9]),
+                        procedure_name=procedure_name,
+                        surgery_duration=duration,
+                        phu_id=ot_assignment.unit_id,  # type: ignore
+                        phu_start_time=ot_start_datetime.time(),
+                        phu_end_time=phu_end_time.time(),
+                        ot_id=ot_id,
+                        ot_start_time=phu_end_time.time(),
+                        ot_end_time=ot_end_datetime.time(),
+                        surgeon_name=str(row[13]),
+                        booked_by=str(row[12]),
+                        post_op_id=ot_assignment.unit_id,  # type: ignore
+                        post_op_start_time=ot_end_datetime.time(),
+                        post_op_end_time=add_duration(
+                            ot_end_datetime.strftime("%H:%M"), 30
+                        ),
+                        pacu_id=ot_assignment.unit_id,  # type: ignore
+                        pacu_start_time=ot_end_datetime.time(),
+                        pacu_end_time=add_duration(
+                            ot_end_datetime.strftime("%H:%M"), 90
+                        ),
+                        icu_id=ot_assignment.unit_id,  # type: ignore
+                        icu_start_time=add_duration(
+                            ot_end_datetime.strftime("%H:%M"), 90
+                        ),
+                        icu_end_time=add_duration(
+                            ot_end_datetime.strftime("%H:%M"), 330
+                        )
+                    )
+                    schedule_results.append(
+                        ScheduleResults(**schedule_result.dict()))
 
     file.file.seek(0)
     try:
