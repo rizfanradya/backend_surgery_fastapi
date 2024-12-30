@@ -247,7 +247,7 @@ def generate_daily_schedule(
         ot_start_time = last_end_time[ot_id][operation_date]
         ot_start_datetime = datetime.combine(
             operation_date, ot_start_time)  # type: ignore
-        phu_end_time = ot_start_datetime + timedelta(minutes=duration)
+        phu_end_time = ot_start_datetime + timedelta(minutes=60)
         ot_end_datetime = phu_end_time + timedelta(minutes=duration)
         last_end_time[ot_id][operation_date] = ot_end_datetime.time()
 
