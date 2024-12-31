@@ -290,9 +290,10 @@ def generate_daily_schedule(
                         ot_start_datetime = datetime.combine(
                             operation_date, ot_start_time)
 
-                        phu_end_time = ot_start_datetime + \
+                        phu_end_time = ot_start_datetime
+                        phu_start_time = ot_start_datetime - \
                             timedelta(minutes=60)
-                        ot_end_datetime = phu_end_time + \
+                        ot_end_datetime = ot_start_datetime + \
                             timedelta(minutes=duration)
 
                         if ot_end_datetime.time() <= time(16, 0):
@@ -311,7 +312,7 @@ def generate_daily_schedule(
                                 procedure_name=procedure_name,
                                 surgery_duration=duration,
                                 phu_id=ot_assignment.unit_id,  # type: ignore
-                                phu_start_time=ot_start_datetime.time(),
+                                phu_start_time=phu_start_time.time(),
                                 phu_end_time=phu_end_time.time(),
                                 ot_id=ot_id,
                                 ot_start_time=ot_start_datetime.time(),
