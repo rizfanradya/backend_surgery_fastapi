@@ -14,9 +14,9 @@ DATABASE_URL = f"postgresql+psycopg2://{DBU}:{DBP}@{DBH}:{DBPRT}/{DBN}"
 
 db_engine = create_engine(
     DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=60,
+    pool_size=20,
+    max_overflow=40,
+    pool_timeout=30,
     pool_recycle=1800,
     pool_pre_ping=True
 )
