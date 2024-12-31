@@ -244,8 +244,6 @@ def generate_daily_schedule(
     available_ots = session.scalars(
         session.query(Ot.id).order_by(Ot.id.asc())).all()
 
-    assigned_ots = set()
-
     operation_dates = []
     current_date = start_date_dt
     while current_date <= end_date_dt:
@@ -257,11 +255,9 @@ def generate_daily_schedule(
         min_row=2, values_only=True)]
 
     for row_idx, row in enumerate(excel_rows, start=2):
-        ot_assignment = session.query(OtAssignment).where(
-            OtAssignment.mssp_id == master_plan_id,
-            OtAssignment.mrn == str(row[1])
-        ).first()
-        if ot_assignment is None:
+        unit_data = session.query(Unit).where(
+            cast(Unit.name, String).ilike(f"%{row[8]}%")).first()
+        if unit_data is None:
             continue
 
         duration_str = str(row[11])
@@ -279,73 +275,82 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
+        assigned_ots = {
+            (result.ot_id, result.day_id, result.week_id)
+            for result in schedule_results
+        }
+
+        ot_id, day_id, week_id = None, None, None
         for operation_date in operation_dates:
-            for week_id in available_weeks:
-                for day_id in available_days:
-                    for ot_id in available_ots:
-                        if (ot_id, day_id, week_id) in assigned_ots:
-                            continue
-
-                        ot_start_time = time(8, 0)
-                        ot_start_datetime = datetime.combine(
-                            operation_date, ot_start_time)
-
-                        phu_end_time = ot_start_datetime
-                        phu_start_time = ot_start_datetime - \
-                            timedelta(minutes=60)
-                        ot_end_datetime = ot_start_datetime + \
-                            timedelta(minutes=duration)
-
-                        if ot_end_datetime.time() <= time(16, 0):
-                            assigned_ots.add((ot_id, day_id, week_id))
-
-                            schedule_result = ScheduleResultsSchema(
-                                run_id=run_id,
-                                mrn=str(row[1]),
-                                age=row[2],  # type: ignore
-                                week_id=week_id,
-                                day_id=day_id,
-                                surgery_date=operation_date.date(),
-                                type_of_surgery=str(row[7]),
-                                sub_specialty_desc=str(row[8]),
-                                specialty_id=str(row[9]),
-                                procedure_name=procedure_name,
-                                surgery_duration=duration,
-                                phu_id=ot_assignment.unit_id,  # type: ignore
-                                phu_start_time=phu_start_time.time(),
-                                phu_end_time=phu_end_time.time(),
-                                ot_id=ot_id,
-                                ot_start_time=ot_start_datetime.time(),
-                                ot_end_time=ot_end_datetime.time(),
-                                surgeon_name=str(row[13]),
-                                booked_by=str(row[12]),
-                                post_op_id=ot_assignment.unit_id,  # type: ignore
-                                post_op_start_time=ot_end_datetime.time(),
-                                post_op_end_time=add_duration(
-                                    ot_end_datetime.strftime("%H:%M"), 30
-                                ),
-                                pacu_id=ot_assignment.unit_id,  # type: ignore
-                                pacu_start_time=ot_end_datetime.time(),
-                                pacu_end_time=add_duration(
-                                    ot_end_datetime.strftime("%H:%M"), 90
-                                ),
-                                icu_id=ot_assignment.unit_id,  # type: ignore
-                                icu_start_time=add_duration(
-                                    ot_end_datetime.strftime("%H:%M"), 90
-                                ),
-                                icu_end_time=add_duration(
-                                    ot_end_datetime.strftime("%H:%M"), 330
-                                )
-                            )
-                            schedule_results.append(
-                                ScheduleResults(**schedule_result.dict()))
+            for week_ids in available_weeks:
+                for day_ids in available_days:
+                    for ot_ids in available_ots:
+                        if (ot_ids, day_ids, week_ids) not in assigned_ots:
+                            ot_id = ot_ids
+                            day_id = day_ids
+                            week_id = week_ids
                             break
-                    else:
-                        continue
+                    if ot_id and day_id and week_id:
+                        break
+                if ot_id and day_id and week_id:
                     break
-                else:
-                    continue
+            if ot_id and day_id and week_id:
                 break
+
+        if not ot_id or not day_id or not week_id:
+            continue
+
+        ot_start_time = time(8, 0)
+        ot_start_datetime = datetime.combine(
+            operation_date, ot_start_time)  # type: ignore
+
+        phu_end_time = ot_start_datetime
+        phu_start_time = ot_start_datetime - timedelta(minutes=60)
+        ot_end_datetime = ot_start_datetime + timedelta(minutes=duration)
+
+        if ot_end_datetime.time() <= time(16, 0):
+            assigned_ots.add((ot_id, day_id, week_id))
+
+            schedule_result = ScheduleResultsSchema(
+                run_id=run_id,
+                mrn=str(row[1]),
+                age=row[2],  # type: ignore
+                week_id=week_id,
+                day_id=day_id,
+                surgery_date=operation_date.date(),  # type: ignore
+                type_of_surgery=str(row[7]),
+                sub_specialty_desc=str(row[8]),
+                specialty_id=str(row[9]),
+                procedure_name=procedure_name,
+                surgery_duration=duration,
+                phu_id=unit_data.id,  # type: ignore
+                phu_start_time=phu_start_time.time(),
+                phu_end_time=phu_end_time.time(),
+                ot_id=ot_id,
+                ot_start_time=ot_start_datetime.time(),
+                ot_end_time=ot_end_datetime.time(),
+                surgeon_name=str(row[13]),
+                booked_by=str(row[12]),
+                post_op_id=unit_data.id,  # type: ignore
+                post_op_start_time=ot_end_datetime.time(),
+                post_op_end_time=add_duration(
+                    ot_end_datetime.strftime("%H:%M"), 30
+                ),
+                pacu_id=unit_data.id,  # type: ignore
+                pacu_start_time=ot_end_datetime.time(),
+                pacu_end_time=add_duration(
+                    ot_end_datetime.strftime("%H:%M"), 90
+                ),
+                icu_id=unit_data.id,  # type: ignore
+                icu_start_time=add_duration(
+                    ot_end_datetime.strftime("%H:%M"), 90
+                ),
+                icu_end_time=add_duration(
+                    ot_end_datetime.strftime("%H:%M"), 330
+                )
+            )
+            schedule_results.append(
+                ScheduleResults(**schedule_result.dict()))
 
     file.file.seek(0)
     try:
