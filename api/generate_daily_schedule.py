@@ -130,15 +130,23 @@ def schedule_results_and_filter(
                 formatted_results.append(result)
         else:
             schedule_by_week = defaultdict(list)
+            surgeries_count = defaultdict(int)
+
+            for result, _, _, _ in schedule_results:
+                key = (result.week_id, result.day_id, result.ot_id)
+                surgeries_count[key] += 1
+
             for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
-                get_odc = ot_data_count.get(result.ot_id, 0)
-                result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
-                result.surgeries = get_odc
+                key = (result.week_id, result.day_id, result.ot_id)
+                result.surgeries = surgeries_count[key]
+                result.category = f"OT {result.ot_id}\n{
+                    result.surgeries} Surgeries"
                 result.task = f"MRN-{result.mrn}"
                 result.color = color_hex or color_map.get(
                     sub_specialty_desc, "")
                 result.sub_specialty_desc = sub_specialty_desc
                 schedule_by_week[result.week_id].append(result)
+
             formatted_results = [
                 {
                     "week": week,
