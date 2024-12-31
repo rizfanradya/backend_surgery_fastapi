@@ -95,8 +95,9 @@ def schedule_results_and_filter(
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == week_id)
             else:
-                schedule_results = schedule_results.where(
-                    ScheduleResults.week_id == weeks[0].id)
+                if weeks:
+                    schedule_results = schedule_results.where(
+                        ScheduleResults.week_id == weeks[0].id)
 
         total = schedule_results.count()
         if type == 'timeline':
@@ -232,7 +233,6 @@ def generate_daily_schedule(
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
     schedule_results: List[ScheduleResults] = []
-    last_end_time = defaultdict(lambda: defaultdict(lambda: time(8, 0)))
 
     available_weeks = session.scalars(
         session.query(Week.id).where(
@@ -249,7 +249,7 @@ def generate_daily_schedule(
     operation_dates = []
     current_date = start_date_dt
     while current_date <= end_date_dt:
-        if current_date.weekday() < 5:  # Hanya hari kerja (Senin - Jumat)
+        if current_date.weekday() < 5:
             operation_dates.append(current_date)
         current_date += timedelta(days=1)
 
@@ -286,17 +286,16 @@ def generate_daily_schedule(
                         if (ot_id, day_id, week_id) in assigned_ots:
                             continue
 
-                        ot_start_time = last_end_time[ot_id][operation_date]
+                        ot_start_time = time(8, 0)
                         ot_start_datetime = datetime.combine(
                             operation_date, ot_start_time)
+
                         phu_end_time = ot_start_datetime + \
                             timedelta(minutes=60)
                         ot_end_datetime = phu_end_time + \
                             timedelta(minutes=duration)
 
                         if ot_end_datetime.time() <= time(16, 0):
-                            last_end_time[ot_id][operation_date] = ot_end_datetime.time(
-                            )
                             assigned_ots.add((ot_id, day_id, week_id))
 
                             schedule_result = ScheduleResultsSchema(
@@ -315,7 +314,7 @@ def generate_daily_schedule(
                                 phu_start_time=ot_start_datetime.time(),
                                 phu_end_time=phu_end_time.time(),
                                 ot_id=ot_id,
-                                ot_start_time=phu_end_time.time(),
+                                ot_start_time=ot_start_datetime.time(),
                                 ot_end_time=ot_end_datetime.time(),
                                 surgeon_name=str(row[13]),
                                 booked_by=str(row[12]),
