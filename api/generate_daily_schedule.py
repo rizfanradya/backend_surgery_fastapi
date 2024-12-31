@@ -232,7 +232,7 @@ def generate_daily_schedule(
         send_error_response('Master plan not found')
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
-    schedule_results: List[ScheduleResults] = []
+    schedule_results = []
 
     available_weeks = session.scalars(
         session.query(Week.id).where(
