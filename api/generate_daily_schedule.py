@@ -39,8 +39,6 @@ def schedule_results_and_filter(
     subspecialty_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
     patient_name: Optional[str] = None,
-    limit: int = 10,
-    offset: int = 0,
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
@@ -96,8 +94,6 @@ def schedule_results_and_filter(
                         ScheduleResults.week_id == weeks[0].id)
 
         total = schedule_results.count()
-        if type == 'timeline':
-            schedule_results = schedule_results.limit(limit).offset(offset)
         schedule_results = schedule_results.all()
 
         ot_data = session.query(Ot).order_by(Ot.id.asc()).all()
