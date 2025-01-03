@@ -272,29 +272,38 @@ def generate_daily_schedule(
         procedure_name = f"PROCEDURE - {procedure_name}"
 
         scheduled = False
-        for week_ids in available_weeks:
-            for day_ids in available_days:
-                for ot_ids in available_ots:
+        ot_week_filled = {}
+
+        for week_idx, week_ids in enumerate(available_weeks):
+            for ot_ids in available_ots:
+                for day_ids in available_days:
                     key = (ot_ids, day_ids, week_ids)
+
+                    if key in ot_week_filled and ot_week_filled[key]:
+                        continue
+
                     if key not in ot_time_tracking:
                         ot_time_tracking[key] = datetime.combine(
-                            start_date_dt, time(8, 0))
+                            start_date_dt + timedelta(days=(day_ids - 1)),
+                            time(8, 0)
+                        )
 
                     ot_start_datetime = ot_time_tracking[key]
                     ot_end_datetime = ot_start_datetime + \
                         timedelta(minutes=duration)
 
-                    remaining_minutes = work_day_minutes - \
-                        (ot_start_datetime.hour * 60 +
-                         ot_start_datetime.minute - 480)
+                    if ot_end_datetime.time() > time(16, 0):
+                        ot_week_filled[key] = True
+                        continue
+
+                    remaining_minutes = work_day_minutes - (
+                        ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480
+                    )
+
                     if duration > remaining_minutes:
                         continue
 
-                    if ot_end_datetime.time() > time(16, 0):
-                        continue
-
                     ot_time_tracking[key] = ot_end_datetime
-
                     schedule_result = ScheduleResultsSchema(
                         run_id=run_id,
                         mrn=str(row[1]),
@@ -308,7 +317,7 @@ def generate_daily_schedule(
                         procedure_name=procedure_name,
                         surgery_duration=duration,
                         phu_id=unit_data.id,  # type: ignore
-                        phu_start_time=(ot_start_datetime -
+                        phu_start_time=(ot_start_datetime - \
                                         timedelta(minutes=60)).time(),
                         phu_end_time=ot_start_datetime.time(),
                         ot_id=ot_ids,
@@ -342,8 +351,6 @@ def generate_daily_schedule(
                     break
             if scheduled:
                 break
-        if not scheduled:
-            start_date_dt += timedelta(days=1)
 
     file.file.seek(0)
     try:
