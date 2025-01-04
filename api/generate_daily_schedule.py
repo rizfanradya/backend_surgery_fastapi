@@ -32,10 +32,10 @@ router = APIRouter()
 
 @router.get('/result')
 def schedule_results_and_filter(
-    surgery_date: dt_datetime,
+    surgery_date: Optional[dt_datetime] = None,
     ot_id: Optional[int] = None,
     week_id: Optional[int] = None,
-    type: Literal['timeline', 'weekly', 'all_weeks'] = 'timeline',
+    type: Literal['daily', 'weekly', 'monthly'] = 'daily',
     subspecialty_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
     patient_name: Optional[str] = None,
@@ -52,10 +52,11 @@ def schedule_results_and_filter(
             ProcedureName, ProcedureName.name == ScheduleResults.procedure_name
         ).join(
             SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
-        ).where(
-            ScheduleResults.surgery_date == surgery_date
         )
 
+        if surgery_date and type == 'daily':
+            schedule_results = schedule_results.where(
+                ScheduleResults.surgery_date == surgery_date)
         if ot_id:
             schedule_results = schedule_results.where(
                 ScheduleResults.ot_id == ot_id
@@ -84,7 +85,7 @@ def schedule_results_and_filter(
         ]
         weeks = session.query(Week).where(
             Week.id.in_(week_list)).order_by(Week.id).all()
-        if type != 'all_weeks':
+        if type != 'monthly':
             if week_id:
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == week_id)
@@ -110,7 +111,7 @@ def schedule_results_and_filter(
             count = ot_data_count.get(ot.id, 0)
             ot.category = f"OT {ot.id}\n{count} Surgeries"
 
-        if type == 'timeline':
+        if type == 'daily':
             formatted_results = []
             for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
                 get_odc = ot_data_count.get(result.ot_id, 0)
@@ -148,7 +149,7 @@ def schedule_results_and_filter(
                 for week, data in schedule_by_week.items()
             ]
 
-        all_weeks = session.query(Week).order_by(Week.id.asc()).all()
+        monthly = session.query(Week).order_by(Week.id.asc()).all()
         all_days = session.query(Day).order_by(Day.id.asc()).all()
 
         return {
@@ -157,7 +158,7 @@ def schedule_results_and_filter(
             "subspecialty": subspecialties,
             "surgeon_name_list": surgeon_name_list,
             "weeks": weeks,
-            "all_weeks": all_weeks,
+            "monthly": monthly,
             "all_days": all_days,
             "ot": ot_data,
         }
