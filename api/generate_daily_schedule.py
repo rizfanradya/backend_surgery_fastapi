@@ -1,12 +1,13 @@
 from collections import defaultdict
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from utils.database import get_db
 from sqlalchemy.orm import Session
+from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.add_duration import add_duration
+from utils.calculate_week_name import calculate_week_name
 from datetime import date, datetime, time, timedelta
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
@@ -247,21 +248,6 @@ def generate_daily_schedule(
     schedule_results = []
     date_index = 0
 
-    def calculate_week_name(date_in):
-        # Cari Senin pertama dalam bulan operasi
-        first_day_of_month = date(date_in.year, date_in.month, 1)
-        first_monday_of_month = first_day_of_month + timedelta(
-            days=(7 - first_day_of_month.weekday()) % 7
-        )
-
-        # Jika tanggal sebelum Senin pertama dalam bulan ini, masuk Week 1
-        if date_in < first_monday_of_month:
-            return "Week 1"
-
-        # Hitung minggu dari Senin pertama bulan ini
-        week_number = ((date_in - first_monday_of_month).days // 7) + 1
-        return f"Week {week_number}"
-
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
         unit_data = session.query(Unit).where(
@@ -295,9 +281,7 @@ def generate_daily_schedule(
                 operation_date = operation_dates[date_index % len(
                     operation_dates)]
 
-                # Hitung minggu dari tanggal operasi dan format ke "Week X"
                 week_name = calculate_week_name(operation_date.date())
-
                 matching_week = session.query(Week).filter(
                     Week.name == week_name
                 ).first()
@@ -305,10 +289,8 @@ def generate_daily_schedule(
                     continue
 
                 key = (ot_ids, day_ids, matching_week.id, operation_date)
-
                 if key in ot_week_filled and ot_week_filled[key]:
                     continue
-
                 if key not in ot_time_tracking:
                     ot_time_tracking[key] = datetime.combine(
                         operation_date,
@@ -326,7 +308,6 @@ def generate_daily_schedule(
                 remaining_minutes = work_day_minutes - (
                     ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480
                 )
-
                 if duration > remaining_minutes:
                     continue
 
@@ -335,7 +316,7 @@ def generate_daily_schedule(
                     run_id=run_id,
                     mrn=str(row[1]),
                     age=row[2],  # type: ignore
-                    week_id=matching_week.id,
+                    week_id=matching_week.id,  # type: ignore
                     day_id=day_ids,
                     surgery_date=ot_start_datetime.date(),
                     type_of_surgery=str(row[7]),
