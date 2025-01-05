@@ -85,7 +85,7 @@ def schedule_results_and_filter(
         ]
         weeks = session.query(Week).where(
             Week.id.in_(week_list)).order_by(Week.id).all()
-        if type != 'monthly':
+        if type == 'weekly':
             if week_id:
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == week_id)
