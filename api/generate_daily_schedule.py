@@ -246,6 +246,7 @@ def generate_daily_schedule(
     ot_time_tracking = {}
     work_day_minutes = 8 * 60
     schedule_results = []
+    date_index = 0  # Track round-robin index
 
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
@@ -278,14 +279,16 @@ def generate_daily_schedule(
         for week_idx, week_ids in enumerate(available_weeks):
             for ot_ids in available_ots:
                 for day_ids in available_days:
-                    key = (ot_ids, day_ids, week_ids)
+                    operation_date = operation_dates[date_index % len(
+                        operation_dates)]
+                    key = (ot_ids, day_ids, week_ids, operation_date)
 
                     if key in ot_week_filled and ot_week_filled[key]:
                         continue
 
                     if key not in ot_time_tracking:
                         ot_time_tracking[key] = datetime.combine(
-                            start_date_dt + timedelta(days=(day_ids - 1)),
+                            operation_date,
                             time(8, 0)
                         )
 
@@ -347,6 +350,7 @@ def generate_daily_schedule(
                     schedule_results.append(
                         ScheduleResults(**schedule_result.dict()))
                     scheduled = True
+                    date_index += 1
                     break
                 if scheduled:
                     break
