@@ -7,7 +7,7 @@ from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.add_duration import add_duration
-from datetime import date as dt_datetime, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
@@ -32,7 +32,7 @@ router = APIRouter()
 
 @router.get('/result')
 def schedule_results_and_filter(
-    surgery_date: Optional[dt_datetime] = None,
+    surgery_date: Optional[date] = None,
     ot_id: Optional[int] = None,
     week_id: Optional[int] = None,
     type: Literal['daily', 'weekly', 'monthly'] = 'daily',
@@ -179,8 +179,8 @@ def surgery_details(mrn: str, session: Session = Depends(get_db), token: str = D
 def generate_daily_schedule(
     file: UploadFile = File(...),
     master_plan_id: str = Form(...),
-    start_date: dt_datetime = Form(...),
-    end_date: dt_datetime = Form(...),
+    start_date: date = Form(...),
+    end_date: date = Form(...),
     resource: str = Form(...),
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
@@ -216,6 +216,10 @@ def generate_daily_schedule(
     start_date_dt = parse_date(start_date)
     end_date_dt = parse_date(end_date)
 
+    if start_date_dt.weekday() != 0:
+        send_error_response('Start date must be a Monday')
+    if end_date_dt.weekday() != 4:
+        send_error_response('End date must be a Friday')
     if start_date_dt > end_date_dt:
         send_error_response('Start date cannot be after end date')
 
@@ -226,11 +230,6 @@ def generate_daily_schedule(
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
 
-    available_weeks = session.scalars(
-        session.query(Week.id).where(
-            Week.status_id == status.id  # type: ignore
-        ).order_by(Week.id.asc())
-    ).all()
     available_days = session.scalars(
         session.query(Day.id).order_by(Day.id.asc())).all()
     available_ots = session.scalars(
@@ -246,7 +245,22 @@ def generate_daily_schedule(
     ot_time_tracking = {}
     work_day_minutes = 8 * 60
     schedule_results = []
-    date_index = 0  # Track round-robin index
+    date_index = 0
+
+    def calculate_week_name(date_in):
+        # Cari Senin pertama dalam tahun
+        first_day_of_year = date(date_in.year, 1, 1)
+        first_monday_of_year = first_day_of_year + timedelta(
+            days=(7 - first_day_of_year.weekday()) % 7
+        )
+
+        # Jika tanggal sebelum Senin pertama dalam tahun ini, masuk Week 1
+        if date_in < first_monday_of_year:
+            return "Week 1"
+
+        # Hitung minggu dari Senin pertama tahun ini
+        week_number = ((date_in - first_monday_of_year).days // 7) + 1
+        return f"Week {week_number}"
 
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
@@ -276,84 +290,91 @@ def generate_daily_schedule(
         scheduled = False
         ot_week_filled = {}
 
-        for week_idx, week_ids in enumerate(available_weeks):
-            for ot_ids in available_ots:
-                for day_ids in available_days:
-                    operation_date = operation_dates[date_index % len(
-                        operation_dates)]
-                    key = (ot_ids, day_ids, week_ids, operation_date)
+        for ot_ids in available_ots:
+            for day_ids in available_days:
+                operation_date = operation_dates[date_index % len(
+                    operation_dates)]
 
-                    if key in ot_week_filled and ot_week_filled[key]:
-                        continue
+                # Hitung minggu dari tanggal operasi dan format ke "Week X"
+                week_name = calculate_week_name(operation_date.date())
 
-                    if key not in ot_time_tracking:
-                        ot_time_tracking[key] = datetime.combine(
-                            operation_date,
-                            time(8, 0)
-                        )
+                matching_week = session.query(Week).filter(
+                    Week.name == week_name
+                ).first()
+                if not matching_week:
+                    continue
 
-                    ot_start_datetime = ot_time_tracking[key]
-                    ot_end_datetime = ot_start_datetime + \
-                        timedelta(minutes=duration)
+                key = (ot_ids, day_ids, matching_week.id, operation_date)
 
-                    if ot_end_datetime.time() > time(16, 0):
-                        ot_week_filled[key] = True
-                        continue
+                if key in ot_week_filled and ot_week_filled[key]:
+                    continue
 
-                    remaining_minutes = work_day_minutes - (
-                        ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480
+                if key not in ot_time_tracking:
+                    ot_time_tracking[key] = datetime.combine(
+                        operation_date,
+                        time(8, 0)
                     )
 
-                    if duration > remaining_minutes:
-                        continue
+                ot_start_datetime = ot_time_tracking[key]
+                ot_end_datetime = ot_start_datetime + \
+                    timedelta(minutes=duration)
 
-                    ot_time_tracking[key] = ot_end_datetime
-                    schedule_result = ScheduleResultsSchema(
-                        run_id=run_id,
-                        mrn=str(row[1]),
-                        age=row[2],  # type: ignore
-                        week_id=week_ids,
-                        day_id=day_ids,
-                        surgery_date=ot_start_datetime.date(),
-                        type_of_surgery=str(row[7]),
-                        sub_specialty_desc=str(row[8]),
-                        specialty_id=str(row[9]),
-                        procedure_name=procedure_name,
-                        surgery_duration=duration,
-                        phu_id=unit_data.id,  # type: ignore
-                        phu_start_time=(ot_start_datetime - \
-                                        timedelta(minutes=60)).time(),
-                        phu_end_time=ot_start_datetime.time(),
-                        ot_id=ot_ids,
-                        ot_start_time=ot_start_datetime.time(),
-                        ot_end_time=ot_end_datetime.time(),
-                        surgeon_name=str(row[13]),
-                        booked_by=str(row[12]),
-                        post_op_id=unit_data.id,  # type: ignore
-                        post_op_start_time=ot_end_datetime.time(),
-                        post_op_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 30
-                        ),
-                        pacu_id=unit_data.id,  # type: ignore
-                        pacu_start_time=ot_end_datetime.time(),
-                        pacu_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 90
-                        ),
-                        icu_id=unit_data.id,  # type: ignore
-                        icu_start_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 90
-                        ),
-                        icu_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 330
-                        )
+                if ot_end_datetime.time() > time(16, 0):
+                    ot_week_filled[key] = True
+                    continue
+
+                remaining_minutes = work_day_minutes - (
+                    ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480
+                )
+
+                if duration > remaining_minutes:
+                    continue
+
+                ot_time_tracking[key] = ot_end_datetime
+                schedule_result = ScheduleResultsSchema(
+                    run_id=run_id,
+                    mrn=str(row[1]),
+                    age=row[2],  # type: ignore
+                    week_id=matching_week.id,
+                    day_id=day_ids,
+                    surgery_date=ot_start_datetime.date(),
+                    type_of_surgery=str(row[7]),
+                    sub_specialty_desc=str(row[8]),
+                    specialty_id=str(row[9]),
+                    procedure_name=procedure_name,
+                    surgery_duration=duration,
+                    phu_id=unit_data.id,  # type: ignore
+                    phu_start_time=(ot_start_datetime - \
+                                    timedelta(minutes=60)).time(),
+                    phu_end_time=ot_start_datetime.time(),
+                    ot_id=ot_ids,
+                    ot_start_time=ot_start_datetime.time(),
+                    ot_end_time=ot_end_datetime.time(),
+                    surgeon_name=str(row[13]),
+                    booked_by=str(row[12]),
+                    post_op_id=unit_data.id,  # type: ignore
+                    post_op_start_time=ot_end_datetime.time(),
+                    post_op_end_time=add_duration(
+                        ot_end_datetime.strftime("%H:%M"), 30
+                    ),
+                    pacu_id=unit_data.id,  # type: ignore
+                    pacu_start_time=ot_end_datetime.time(),
+                    pacu_end_time=add_duration(
+                        ot_end_datetime.strftime("%H:%M"), 90
+                    ),
+                    icu_id=unit_data.id,  # type: ignore
+                    icu_start_time=add_duration(
+                        ot_end_datetime.strftime("%H:%M"), 90
+                    ),
+                    icu_end_time=add_duration(
+                        ot_end_datetime.strftime("%H:%M"), 330
                     )
-                    schedule_results.append(
-                        ScheduleResults(**schedule_result.dict()))
-                    scheduled = True
-                    date_index += 1
-                    break
-                if scheduled:
-                    break
+                )
+                schedule_results.append(
+                    ScheduleResults(**schedule_result.dict()))
+                scheduled = True
+                date_index += 1
+                break
             if scheduled:
                 break
 
@@ -361,10 +382,7 @@ def generate_daily_schedule(
     try:
         session.add_all(schedule_results)
         session.commit()
-        return {
-            "run_id": run_id,
-            "message": "Schedule generated successfully"
-        }
+        return {"run_id": run_id, "message": "Schedule generated successfully"}
     except Exception as error:
         send_error_response(str(error), 'Cannot create daily schedule')
 
