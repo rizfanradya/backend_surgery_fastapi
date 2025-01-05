@@ -248,18 +248,18 @@ def generate_daily_schedule(
     date_index = 0
 
     def calculate_week_name(date_in):
-        # Cari Senin pertama dalam tahun
-        first_day_of_year = date(date_in.year, 1, 1)
-        first_monday_of_year = first_day_of_year + timedelta(
-            days=(7 - first_day_of_year.weekday()) % 7
+        # Cari Senin pertama dalam bulan operasi
+        first_day_of_month = date(date_in.year, date_in.month, 1)
+        first_monday_of_month = first_day_of_month + timedelta(
+            days=(7 - first_day_of_month.weekday()) % 7
         )
 
-        # Jika tanggal sebelum Senin pertama dalam tahun ini, masuk Week 1
-        if date_in < first_monday_of_year:
+        # Jika tanggal sebelum Senin pertama dalam bulan ini, masuk Week 1
+        if date_in < first_monday_of_month:
             return "Week 1"
 
-        # Hitung minggu dari Senin pertama tahun ini
-        week_number = ((date_in - first_monday_of_year).days // 7) + 1
+        # Hitung minggu dari Senin pertama bulan ini
+        week_number = ((date_in - first_monday_of_month).days // 7) + 1
         return f"Week {week_number}"
 
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
