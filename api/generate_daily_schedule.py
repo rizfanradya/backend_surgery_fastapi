@@ -340,8 +340,10 @@ def generate_daily_schedule(
             if not matching_week:
                 continue
 
+            monday_of_week = operation_date - \
+                timedelta(days=operation_date.weekday())
             matching_month = session.query(Month).where(
-                cast(Month.name, String).ilike(f"%{operation_date.strftime('%B')}%")).first()
+                cast(Month.name, String).ilike(f"%{monday_of_week.strftime('%B')}%")).first()
             if not matching_month:
                 send_error_response(
                     f"Month not found for date {operation_date}")
