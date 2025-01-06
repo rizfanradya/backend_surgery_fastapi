@@ -151,8 +151,9 @@ def schedule_results_and_filter(
                 for week, data in schedule_by_week.items()
             ]
 
-        monthly = session.query(Week).order_by(Week.id.asc()).all()
+        all_weeks = session.query(Week).order_by(Week.id.asc()).all()
         all_days = session.query(Day).order_by(Day.id.asc()).all()
+        all_month = session.query(Month).order_by(Month.id.asc()).all()
 
         return {
             "total": total,
@@ -160,9 +161,10 @@ def schedule_results_and_filter(
             "subspecialty": subspecialties,
             "surgeon_name_list": surgeon_name_list,
             "weeks": weeks,
-            "monthly": monthly,
+            "all_weeks": all_weeks,
             "all_days": all_days,
-            "ot": ot_data,
+            "all_month": all_month,
+            "all_ots": ot_data,
         }
     except Exception as error:
         send_error_response(error, 'Failed get schedule result')
