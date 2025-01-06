@@ -12,3 +12,4 @@ class Status(Base):
     equipment_msp = relationship('EquipmentMsp', back_populates='status')
     ot = relationship('Ot', back_populates='status')
     week = relationship('Week', back_populates='status')
+    month = relationship('Month', back_populates='status')

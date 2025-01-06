@@ -30,6 +30,7 @@ import api.schedule_results as schedule_results
 import api.role as role
 import api.clashing_subspecialties as clashing_subspecialties
 import api.schedule_resource as schedule_resource
+import api.month as month
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -40,6 +41,7 @@ routers = [
     (unit.router, "Unit API", "/api"),
     (ot_assignment.router, "Ot Assignment API", "/api"),
     (week.router, "Week API", "/api"),
+    (month.router, "Month API", "/api"),
     (generate_masterplan.router, "Generate Master Plan API", "/api/masplan"),
     (generate_daily_schedule.router, "Generate Daily Schedule API", "/api/schedule"),
     (settings_server.router, "Settings Server API", "/api"),

@@ -308,6 +308,7 @@ def generate_daily_schedule(
                 age=row[2],  # type: ignore
                 week_id=matching_week.id,  # type: ignore
                 day_id=day_id,
+                month_id=1,
                 surgery_date=ot_start_datetime.date(),
                 type_of_surgery=str(row[7]),
                 sub_specialty_desc=str(row[8]),

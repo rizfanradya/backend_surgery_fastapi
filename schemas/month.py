@@ -2,19 +2,19 @@ from pydantic import BaseModel
 from typing import List
 
 
-class WeekSchema(BaseModel):
+class MonthSchema(BaseModel):
     name: str
     status_id: int
 
 
-class BaseSchema(WeekSchema):
+class BaseSchema(MonthSchema):
     id: int
 
     class Config:
         from_attributes = True
 
 
-class WeekResponseSchema(BaseModel):
+class MonthResponseSchema(BaseModel):
     total_data: int
     data: List[BaseSchema]
 
