@@ -130,6 +130,10 @@ def schedule_results_and_filter(
             (week['week_id'], week['month_id']): week['fmt_name']
             for week in all_weeks
         }
+        fmt_week_date_map = {
+            (week['week_id'], week['month_id']): week['name']
+            for week in all_weeks
+        }
 
         if type == 'daily':
             formatted_results = []
@@ -157,13 +161,15 @@ def schedule_results_and_filter(
                 result.color = color_hex or color_map.get(
                     sub_specialty_desc, "")
                 result.sub_specialty_desc = sub_specialty_desc
-                schedule_by_week[result.week_id].append(result)
+                schedule_by_week[(result.week_id, result.month_id)].append(
+                    result)
             formatted_results = [
                 {
-                    "week": week_date_map[(week, all_weeks[0]['month_id'])],
+                    "week": week_date_map.get((week, month), f"Week {week}"),
+                    "fmt_week": fmt_week_date_map.get((week, month), f"Week {week}"),
                     "data": data
                 }
-                for week, data in schedule_by_week.items()
+                for (week, month), data in schedule_by_week.items()
             ]
 
         all_days = session.query(Day).order_by(Day.id.asc()).all()
