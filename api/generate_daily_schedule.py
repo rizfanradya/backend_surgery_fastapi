@@ -57,12 +57,26 @@ def schedule_results_and_filter(
             SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
         )
 
+        all_weeks = sorted(
+            [
+                {
+                    "name": f"{week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
+                    "week_id": week.week_id,
+                    "month_id": week.month_id
+                }
+                for week in session.query(
+                    ScheduleResults.week_id,
+                    ScheduleResults.month_id,
+                    func.min(ScheduleResults.surgery_date).label('start_date'),
+                    func.max(ScheduleResults.surgery_date).label('end_date')
+                ).group_by(ScheduleResults.week_id, ScheduleResults.month_id).all()
+            ],
+            key=lambda x: (x['month_id'], x['week_id']), reverse=True
+        )
+
         if type == 'daily' and surgery_date:
             schedule_results = schedule_results.where(
                 ScheduleResults.surgery_date == surgery_date)
-        if type == 'weekly' and week_id and month_id:
-            schedule_results = schedule_results.where(
-                ScheduleResults.week_id == week_id, ScheduleResults.month_id == month_id)
         if type == 'monthly' and month_id:
             schedule_results = schedule_results.where(
                 ScheduleResults.month_id == month_id)
@@ -75,6 +89,14 @@ def schedule_results_and_filter(
         if patient_name:
             schedule_results = schedule_results.where(
                 cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
+        if type == 'weekly':
+            if week_id and month_id:
+                schedule_results = schedule_results.where(
+                    ScheduleResults.week_id == week_id, ScheduleResults.month_id == month_id)
+            else:
+                schedule_results = schedule_results.where(
+                    ScheduleResults.week_id == all_weeks[0]['week_id'],
+                    ScheduleResults.month_id == all_weeks[0]['month_id'])
 
         surgeon_name_list = [
             result.surgeon_name for result, *_ in schedule_results.distinct(
@@ -137,22 +159,6 @@ def schedule_results_and_filter(
             ]
 
         all_days = session.query(Day).order_by(Day.id.asc()).all()
-        all_weeks = sorted(
-            [
-                {
-                    "name": f"{week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
-                    "week_id": week.week_id,
-                    "month_id": week.month_id
-                }
-                for week in session.query(
-                    ScheduleResults.week_id,
-                    ScheduleResults.month_id,
-                    func.min(ScheduleResults.surgery_date).label('start_date'),
-                    func.max(ScheduleResults.surgery_date).label('end_date')
-                ).group_by(ScheduleResults.week_id, ScheduleResults.month_id).all()
-            ],
-            key=lambda x: (x['month_id'], x['week_id'])
-        )
 
         return {
             "total": total,
