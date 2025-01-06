@@ -300,6 +300,7 @@ def generate_daily_schedule(
     work_day_minutes = 8 * 60
     schedule_results = []
     date_index = 0
+    ot_load_balance = {ot_id: 0 for ot_id in available_ots}
 
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
@@ -325,7 +326,8 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        for ot_ids in available_ots:
+        sorted_ots = sorted(available_ots, key=lambda ot: ot_load_balance[ot])
+        for ot_ids in sorted_ots:
             operation_date = operation_dates[date_index % len(
                 operation_dates)]
 
@@ -364,6 +366,8 @@ def generate_daily_schedule(
             if duration > remaining_minutes:
                 continue
             ot_time_tracking[key] = ot_end_datetime
+
+            ot_load_balance[ot_ids] += 1
 
             schedule_result = ScheduleResultsSchema(
                 run_id=run_id,
