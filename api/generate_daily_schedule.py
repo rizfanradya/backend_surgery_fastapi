@@ -402,7 +402,6 @@ def generate_daily_schedule(
             schedule_results.append(
                 ScheduleResults(**schedule_result.dict()))
             date_index += 1
-            break
 
     file.file.seek(0)
     try:
