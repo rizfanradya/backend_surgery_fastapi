@@ -61,8 +61,11 @@ def schedule_results_and_filter(
             [
                 {
                     "name": f"{week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
+                    "fmt_name": f"Week {week.week_id}: {week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
                     "week_id": week.week_id,
-                    "month_id": week.month_id
+                    "month_id": week.month_id,
+                    "start_date": week.start_date,
+                    "end_date": week.end_date,
                 }
                 for week in session.query(
                     ScheduleResults.week_id,
@@ -123,6 +126,11 @@ def schedule_results_and_filter(
             count = ot_data_count.get(ot.id, 0)
             ot.category = f"OT {ot.id}\n{count} Surgeries"
 
+        week_date_map = {
+            (week['week_id'], week['month_id']): week['fmt_name']
+            for week in all_weeks
+        }
+
         if type == 'daily':
             formatted_results = []
             for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
@@ -152,7 +160,7 @@ def schedule_results_and_filter(
                 schedule_by_week[result.week_id].append(result)
             formatted_results = [
                 {
-                    "week": week,
+                    "week": week_date_map[(week, all_weeks[0]['month_id'])],
                     "data": data
                 }
                 for week, data in schedule_by_week.items()
