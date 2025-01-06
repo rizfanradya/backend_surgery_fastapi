@@ -13,7 +13,7 @@ from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 import json
-from sqlalchemy import func, cast, String
+from sqlalchemy import func, cast, String, extract
 from typing import Optional, Literal
 from schemas.schedule_results import ScheduleResultsSchema
 from schemas.generate_daily_schedule import ScheduleResourceSchema
@@ -38,6 +38,7 @@ def schedule_results_and_filter(
     ot_id: Optional[int] = None,
     week_id: Optional[int] = None,
     month_id: Optional[int] = None,
+    year: Optional[int] = None,
     type: Literal['daily', 'weekly', 'monthly'] = 'daily',
     subspecialty_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
@@ -76,6 +77,28 @@ def schedule_results_and_filter(
             ],
             key=lambda x: (x['month_id'], x['week_id']), reverse=True
         )
+        all_months = sorted(
+            [
+                {
+                    "name": f"{month.name} {month.year}",
+                    "month_id": month.id,
+                    "year": month.year
+                }
+                for month in session.query(
+                    Month.id,
+                    Month.name,
+                    extract('year', ScheduleResults.surgery_date).label('year')
+                ).join(
+                    ScheduleResults, ScheduleResults.month_id == Month.id
+                ).distinct(
+                    Month.id, extract('year', ScheduleResults.surgery_date)
+                ).order_by(
+                    extract('year', ScheduleResults.surgery_date).desc(
+                    ), Month.id.desc()
+                ).all()
+            ],
+            key=lambda x: (x['year'], x['month_id']), reverse=True
+        )
 
         if type == 'daily' and surgery_date:
             schedule_results = schedule_results.where(
@@ -97,9 +120,20 @@ def schedule_results_and_filter(
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == week_id, ScheduleResults.month_id == month_id)
             else:
+                if all_weeks:
+                    schedule_results = schedule_results.where(
+                        ScheduleResults.week_id == all_weeks[0]['week_id'],
+                        ScheduleResults.month_id == all_weeks[0]['month_id'])
+        if type == 'monthly':
+            if month_id and year:
                 schedule_results = schedule_results.where(
-                    ScheduleResults.week_id == all_weeks[0]['week_id'],
-                    ScheduleResults.month_id == all_weeks[0]['month_id'])
+                    ScheduleResults.month_id == month_id,
+                    extract('year', ScheduleResults.surgery_date) == year)
+            else:
+                if all_months:
+                    schedule_results = schedule_results.where(
+                        ScheduleResults.month_id == all_months[0]['month_id'],
+                        extract('year', ScheduleResults.surgery_date) == all_months[0]['year'])
 
         surgeon_name_list = [
             result.surgeon_name for result, *_ in schedule_results.distinct(
@@ -179,6 +213,7 @@ def schedule_results_and_filter(
             "schedule": formatted_results,
             "subspecialty": subspecialties,
             "surgeon_name_list": surgeon_name_list,
+            "all_months": all_months,
             "all_weeks": all_weeks,
             "all_days": all_days,
             "all_ots": ot_data,
