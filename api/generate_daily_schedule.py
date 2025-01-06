@@ -27,6 +27,7 @@ from models.schedule_resource import ScheduleResource
 from models.week import Week
 from models.day import Day
 from models.status import Status
+from models.month import Month
 
 router = APIRouter()
 
@@ -285,6 +286,12 @@ def generate_daily_schedule(
             if not matching_week:
                 continue
 
+            matching_month = session.query(Month).where(
+                cast(Month.name, String).ilike(f"%{operation_date.strftime('%B')}%")).first()
+            if not matching_month:
+                send_error_response(
+                    f"Month not found for date {operation_date}")
+
             key = (ot_ids, day_id, matching_week.id, operation_date)
             if key not in ot_time_tracking:
                 ot_time_tracking[key] = datetime.combine(
@@ -308,7 +315,7 @@ def generate_daily_schedule(
                 age=row[2],  # type: ignore
                 week_id=matching_week.id,  # type: ignore
                 day_id=day_id,
-                month_id=1,
+                month_id=matching_month.id,  # type: ignore
                 surgery_date=ot_start_datetime.date(),
                 type_of_surgery=str(row[7]),
                 sub_specialty_desc=str(row[8]),
