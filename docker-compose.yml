@@ -27,6 +27,8 @@ services:
     restart: always
     volumes:
       - backend_uploads:/app/uploads
+    deploy:
+      replicas: 2
     depends_on:
       postgres:
         condition: service_healthy
