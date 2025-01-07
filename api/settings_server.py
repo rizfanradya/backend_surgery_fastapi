@@ -25,7 +25,6 @@ router = APIRouter()
 def backup_database(token: str = Depends(TokenAuthorization)):
     try:
         os.environ['PGPASSWORD'] = str(DB_PASSWORD)
-
         command = [
             'pg_dump',
             '-U', DB_USER,
@@ -35,7 +34,6 @@ def backup_database(token: str = Depends(TokenAuthorization)):
             '--no-owner',
             '--no-acl'
         ]
-
         process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
@@ -43,14 +41,12 @@ def backup_database(token: str = Depends(TokenAuthorization)):
             text=True
         )
         stdout, stderr = process.communicate()
-
         del os.environ['PGPASSWORD']
         if process.returncode != 0:
             raise RuntimeError(f"Backup command failed: {stderr}")
         output_io = io.StringIO(stdout)
         filename = datetime.now().strftime(
             f'backup_{DB_NAME}_%Y-%m-%d_%H-%M-%S.sql')
-
         return StreamingResponse(
             output_io,
             media_type='application/sql',
@@ -107,3 +103,28 @@ def truncate_constraints(session: Session = Depends(get_db), token: str = Depend
         return {'message': 'Constraints tables truncated successfully'}
     except Exception as error:
         return send_error_response(str(error))
+
+
+@router.get('/terminate_connections')
+def terminate_db_connections(token: str = Depends(TokenAuthorization)):
+    try:
+        command = """
+        docker exec postgres psql -U hctm_surgery -d postgres -c "
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = 'hctm_surgery';
+        "
+        """
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            text=True
+        )
+        stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            raise RuntimeError(f"Failed to terminate connections: {stderr}")
+        return {"message": "All connections to hctm_surgery have been terminated.", "output": stdout}
+    except Exception as error:
+        return send_error_response(error)
