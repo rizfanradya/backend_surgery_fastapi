@@ -302,6 +302,17 @@ def generate_daily_schedule(
     date_index = 0
     ot_load_balance = {ot_id: 0 for ot_id in available_ots}
 
+    try:
+        run_ids = session.query(ScheduleResults.run_id).where(
+            ScheduleResults.surgery_date.in_([start_date, end_date])).distinct().all()
+        run_id_list = [run_id[0] for run_id in run_ids]
+        if run_id_list:
+            session.query(ScheduleResults).where(ScheduleResults.run_id.in_(
+                run_id_list)).delete(synchronize_session=False)
+        session.commit()
+    except Exception as error:
+        send_error_response(error, 'Failed to remove old schedule result')
+
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
         unit_data = session.query(Unit).where(
