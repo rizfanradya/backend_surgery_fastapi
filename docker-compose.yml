@@ -1,3 +1,4 @@
+# docker-compose up --scale backend=2
 version: "3.8"
 
 services:
