@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List
-from datetime import time
+from datetime import time, date
 
 
 class OtAssignmentSchema(BaseModel):
@@ -10,6 +10,7 @@ class OtAssignmentSchema(BaseModel):
     ot_id: int
     unit_id: int
     day_id: int
+    date: date
     is_require_anaes: bool
     opening_time: time
     closing_time: time

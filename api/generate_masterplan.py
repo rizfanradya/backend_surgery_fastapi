@@ -9,7 +9,7 @@ from utils.parse_date import parse_date
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text, cast, String
 from io import BytesIO
-from datetime import datetime, date as dt_datetime
+from datetime import datetime, date
 from openpyxl import load_workbook, Workbook
 import os
 import pytz
@@ -385,12 +385,22 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
 
 @router.post('/generate')
 def generate_masterplan(
-    start_date: dt_datetime = Form(...),
-    end_date: dt_datetime = Form(...),
+    start_date: date = Form(...),
+    end_date: date = Form(...),
     file: UploadFile = File(...),
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
+    start_date_dt = parse_date(start_date)
+    end_date_dt = parse_date(end_date)
+
+    if start_date_dt.weekday() != 0:
+        send_error_response('Start date must be a Monday')
+    if end_date_dt.weekday() != 4:
+        send_error_response('End date must be a Friday')
+    if start_date_dt > end_date_dt:
+        send_error_response('Start date cannot be after end date')
+
     objectives = session.query(Objectives).where(
         cast(Objectives.objectives, String).ilike('%clashing%')).first()
     if objectives is None:
@@ -618,6 +628,7 @@ def generate_masterplan(
                 ot_id=ot_id,  # type: ignore
                 unit_id=unit_data.id,  # type: ignore
                 day_id=day_id,
+                date=parse_date(row[0]),
                 is_require_anaes=True if row[8] == 'Y'else False,
                 opening_time=datetime.strptime(
                     '09:00:00.0000', '%H:%M:%S.%f').time(),
