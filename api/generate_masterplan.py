@@ -494,7 +494,8 @@ def generate_masterplan(
     week_numbers = set()
     current_date = start_date_dt
     while current_date <= end_date_dt:
-        week_numbers.add(current_date.isocalendar()[1])
+        week_number = ((current_date - start_date_dt).days // 7) + 1
+        week_numbers.add(week_number)
         current_date += timedelta(days=1)
     available_week_ids = []
     for week_number in sorted(week_numbers):
