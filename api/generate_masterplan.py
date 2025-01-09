@@ -9,7 +9,7 @@ from utils.parse_date import parse_date
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text, cast, String
 from io import BytesIO
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from openpyxl import load_workbook, Workbook
 import os
 import pytz
@@ -491,8 +491,25 @@ def generate_masterplan(
     surgeries = []
     ot_assignments = []
 
-    available_week_ids = session.scalars(session.query(
-        Week.id).where(Week.status_id == status.id)).all()  # type: ignore
+    week_numbers = set()
+    current_date = start_date_dt
+    while current_date <= end_date_dt:
+        week_numbers.add(current_date.isocalendar()[1])
+        current_date += timedelta(days=1)
+    available_week_ids = []
+    for week_number in sorted(week_numbers):
+        week_name = f"Week {week_number}"
+        week = session.query(Week).where(
+            Week.name == week_name, Week.status_id == status.id).first()
+        if week:
+            available_week_ids.append(week.id)
+    if not available_week_ids:
+        send_error_response(
+            "No available weeks found for the specified dates.")
+    available_week_ids = session.scalars(
+        session.query(Week.id).where(Week.id.in_(
+            available_week_ids))
+    ).all()
 
     try:
         for row_idx, row in enumerate(
