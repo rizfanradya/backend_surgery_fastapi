@@ -626,6 +626,12 @@ def generate_masterplan(
                 new_masterplan.objective_value -= (  # type: ignore
                     total_clashes * objectives.weight)  # type: ignore
 
+            week_start_date = start_date_dt + \
+                timedelta(weeks=(week_id - min(available_week_ids)))
+            target_date = week_start_date + timedelta(days=(day_id - 1))
+            if not (start_date_dt <= target_date <= end_date_dt):
+                continue
+
             surgery_schema = SurgerySchema(
                 mssp_id=new_masterplan.id,  # type: ignore
                 mrn=str(row[2]),
@@ -645,7 +651,7 @@ def generate_masterplan(
                 ot_id=ot_id,  # type: ignore
                 unit_id=unit_data.id,  # type: ignore
                 day_id=day_id,
-                date=parse_date(row[0]),
+                date=target_date,
                 is_require_anaes=True if row[8] == 'Y'else False,
                 opening_time=datetime.strptime(
                     '09:00:00.0000', '%H:%M:%S.%f').time(),
