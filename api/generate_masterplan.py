@@ -6,6 +6,7 @@ from utils.auth import TokenAuthorization
 from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
+from utils.calculate_week_name import calculate_week_name
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, func, text, cast, String
 from io import BytesIO
@@ -490,6 +491,7 @@ def generate_masterplan(
     sheet = workbook.active
     surgeries = []
     ot_assignments = []
+    ot_assignments_2 = []
 
     week_numbers = set()
     current_date = start_date_dt
@@ -583,16 +585,17 @@ def generate_masterplan(
             day_id = None
             week_id = None
             daily_ot_counts = {
-                (assignment.day_id, assignment.unit_id, assignment.week_id): 0
-                for assignment in ot_assignments
+                (assignment['day_id'], assignment['unit_id'], assignment['week_id']): 0
+                for assignment in ot_assignments_2
             }
             assigned_ots = {
-                (assignment.ot_id, assignment.day_id, assignment.week_id)
-                for assignment in ot_assignments
+                (assignment['ot_id'], assignment['day_id'],
+                 assignment['week_id'])
+                for assignment in ot_assignments_2
             }
-            for assignment in ot_assignments:
+            for assignment in ot_assignments_2:
                 daily_ot_counts[
-                    (assignment.day_id, assignment.unit_id, assignment.week_id)] += 1
+                    (assignment['day_id'], assignment['unit_id'], assignment['week_id'])] += 1
             for week_ids in available_week_ids:
                 for day_ids in available_day_ids:
                     if daily_ot_counts.get((day_ids, unit_data.id, week_ids),  # type: ignore
@@ -633,6 +636,11 @@ def generate_masterplan(
             if not (start_date_dt <= target_date <= end_date_dt):
                 continue
 
+            matching_week = session.query(Week).where(
+                Week.name == calculate_week_name(target_date.date())).first()
+            if not matching_week:
+                continue
+
             surgery_schema = SurgerySchema(
                 mssp_id=new_masterplan.id,  # type: ignore
                 mrn=str(row[2]),
@@ -648,7 +656,7 @@ def generate_masterplan(
             ot_assignment_schema = OtAssignmentSchema(
                 mssp_id=new_masterplan.id,  # type: ignore
                 mrn=str(row[2]),
-                week_id=week_id,
+                week_id=matching_week.id,
                 ot_id=ot_id,  # type: ignore
                 unit_id=unit_data.id,  # type: ignore
                 day_id=day_id,
@@ -661,6 +669,12 @@ def generate_masterplan(
             )
             surgeries.append(Surgery(**surgery_schema.dict()))
             ot_assignments.append(OtAssignment(**ot_assignment_schema.dict()))
+            ot_assignments_2.append({
+                'week_id': week_id,
+                'day_id': day_id,
+                'ot_id': ot_id,
+                'unit_id': unit_data.id
+            })
 
         session.add_all(surgeries)
         session.add_all(ot_assignments)
