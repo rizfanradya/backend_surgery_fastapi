@@ -193,7 +193,12 @@ def update_objectives_weight(objectives_weights: UpdateObjectivesWeightsSchema, 
     for update in objectives_weights.UpdatesObj:
         data = session.query(Objectives).get(update.id)
         if data is not None:
-            data.weight = 100 if update.weight >= 100 else update.weight
+            if update.weight > 100:
+                data.weight = 100
+            elif update.weight < 0:
+                data.weight = 0
+            else:
+                data.weight = update.weight
         session.commit()
     return objectives_weights
 
