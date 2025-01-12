@@ -697,71 +697,108 @@ def otassignment(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    masterplan = session.query(Masterplan).get(mssp_id)
-    if masterplan is None:
-        return send_error_response('Masterplan not found.')
+    try:
+        masterplan = session.query(Masterplan).get(mssp_id)
+        if masterplan is None:
+            return send_error_response('Masterplan not found.')
+        ot_assignment = session.query(OtAssignment).join(
+            Day).join(Unit).where(OtAssignment.mssp_id == mssp_id)
 
-    ot_assignment = session.query(OtAssignment).join(
-        Day).join(Unit).where(OtAssignment.mssp_id == mssp_id)  # type: ignore
+        if ot_id:
+            ot_assignment = ot_assignment.where(
+                OtAssignment.ot_id == ot_id)
+        if unit_id:
+            ot_assignment = ot_assignment.where(
+                OtAssignment.unit_id == unit_id)
+        if week_id and type == 'weekly':
+            ot_assignment = ot_assignment.where(
+                OtAssignment.week_id == week_id)
 
-    if ot_id:
-        ot_assignment = ot_assignment.where(
-            OtAssignment.ot_id == ot_id)
-    if unit_id:
-        ot_assignment = ot_assignment.where(
-            OtAssignment.unit_id == unit_id)
-    if week_id and type == 'weekly':
-        ot_assignment = ot_assignment.where(
-            OtAssignment.week_id == week_id)
+        ot_assignment = ot_assignment.all()
+        ot_assignments_map = {}
+        all_ot_ids = [
+            ot.id for ot in session.query(Ot).order_by(Ot.id.asc()).all()]
 
-    ot_assignment = ot_assignment.all()
-    ot_assignments_map = {}
-    all_ot_ids = [
-        ot.id for ot in session.query(Ot).order_by(Ot.id.asc()).all()]
+        for assignment in ot_assignment:
+            week_id = assignment.week_id
+            ot_id = assignment.ot_id
+            day_name = assignment.day.name.lower()
 
-    for assignment in ot_assignment:
-        week_id = assignment.week_id  # type: ignore
-        ot_id = assignment.ot_id  # type: ignore
-        day_name = assignment.day.name.lower()
+            if week_id not in ot_assignments_map:
+                ot_assignments_map[week_id] = {}
+            if ot_id not in ot_assignments_map[week_id]:
+                ot_assignments_map[week_id][ot_id] = {}
 
-        if week_id not in ot_assignments_map:
-            ot_assignments_map[week_id] = {}
-        if ot_id not in ot_assignments_map[week_id]:
-            ot_assignments_map[week_id][ot_id] = {}
+            ot_assignments_map[week_id][ot_id][day_name] = {
+                "unit_name": assignment.unit.name,
+                "is_require_anaes": assignment.is_require_anaes,
+                "time": f"{assignment.opening_time} - {assignment.closing_time}",
+                "color_hex": assignment.unit.color_hex
+            }
 
-        ot_assignments_map[week_id][ot_id][day_name] = {
-            "unit_name": assignment.unit.name,
-            "is_require_anaes": assignment.is_require_anaes,
-            "time": f"{assignment.opening_time} - {assignment.closing_time}",
-            "color_hex": assignment.unit.color_hex
-        }
+        week_date_map = {}
+        for assignment in session.query(OtAssignment).where(OtAssignment.mssp_id == mssp_id).all():
+            week_id = assignment.week_id
+            date = assignment.date
+            if week_id not in week_date_map:
+                week_date_map[week_id] = {"start_date": date, "end_date": date}
+            else:
+                if date < week_date_map[week_id]["start_date"]:
+                    week_date_map[week_id]["start_date"] = date
+                if date > week_date_map[week_id]["end_date"]:
+                    week_date_map[week_id]["end_date"] = date
 
-    grouped_data = []
-    for week_id, ot_data in ot_assignments_map.items():
-        data = []
-        for ot_id in all_ot_ids:  # type: ignore
-            week = ot_data.get(ot_id, {})
-            data.append({
-                "ot_id": ot_id,
-                "week": week
+        formatted_weeks = []
+        for week in session.query(Week).all():
+            if week.id not in week_date_map:
+                continue
+
+            start_date = week_date_map[week.id]["start_date"]
+            end_date = week_date_map[week.id]["end_date"]
+
+            if start_date.month == end_date.month and start_date.year == end_date.year:
+                name = f"{start_date.strftime(
+                    '%d')} - {end_date.strftime('%d %b %Y')}"
+            elif start_date.year == end_date.year:
+                name = f"{start_date.strftime(
+                    '%d %b')} - {end_date.strftime('%d %b %Y')}"
+            else:
+                name = f"{start_date.strftime(
+                    '%d %b %Y')} - {end_date.strftime('%d %b %Y')}"
+
+            formatted_weeks.append({
+                "name": name,
+                "fmt_name": f"{week.name}: {name}",
+                "week_id": week.id,
+                "month_id": start_date.month,
+                "start_date": start_date.strftime('%Y-%m-%d'),
+                "end_date": end_date.strftime('%Y-%m-%d')
             })
-        grouped_data.append({
-            "week": week_id,
-            "data": data
-        })
+        formatted_weeks = sorted(
+            formatted_weeks, key=lambda x: datetime.strptime(x['start_date'], '%Y-%m-%d'))
 
-    weeks = session.query(Week).where(
-        Week.id.in_([w[0] for w in session.query(OtAssignment.week_id).distinct().where(
-            OtAssignment.mssp_id == mssp_id
-        ).all()])).order_by(Week.id).all()
-    days = session.query(Day).order_by(Day.id.asc()).all()
+        grouped_data = []
+        for week_id, ot_data in ot_assignments_map.items():
+            data = []
+            for ot_id in all_ot_ids:
+                week = ot_data.get(ot_id, {})
+                data.append({
+                    "ot_id": ot_id,
+                    "week": week
+                })
+            grouped_data.append({
+                "week": next((fw for fw in formatted_weeks if fw['week_id'] == week_id), {}),
+                "data": data
+            })
 
-    return {
-        "otassignment": grouped_data,
-        "masterPlan": masterplan,
-        "weeks": weeks,
-        "days": days
-    }
+        return {
+            "otassignment": grouped_data,
+            "masterPlan": masterplan,
+            "weeks": formatted_weeks,
+            "days": session.query(Day).order_by(Day.id.asc()).all()
+        }
+    except Exception as error:
+        send_error_response(error, 'Cannot get ot assignment data')
 
 
 @router.post('/validity')
