@@ -21,7 +21,6 @@ from schemas.generate_daily_schedule import ScheduleResourceSchema
 from models.masterplan import Masterplan
 from models.schedule_results import ScheduleResults
 from models.ot import Ot
-from models.sub_specialty import SubSpecialty
 from models.unit import Unit
 from models.procedure_name import ProcedureName
 from models.schedule_resource import ScheduleResource
@@ -41,7 +40,7 @@ def schedule_results_and_filter(
     month_id: Optional[int] = None,
     year: Optional[int] = None,
     ot_id: Optional[int] = None,
-    subspecialty_id: Optional[str] = None,
+    unit_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
     patient_name: Optional[str] = None,
     session: Session = Depends(get_db),
@@ -58,7 +57,6 @@ def schedule_results_and_filter(
 
         all_months = []
         all_weeks = []
-
         if min_year and max_year:
             all_months.append({
                 "name": f"{datetime(year, month, 1).strftime('%B')} {year}",
@@ -94,13 +92,10 @@ def schedule_results_and_filter(
 
         schedule_results = session.query(
             ScheduleResults,
-            ProcedureName.sub_specialty_id,
-            SubSpecialty.color_hex,
-            SubSpecialty.description.label('sub_specialty_desc')
+            Unit.name.label('unit_name'),
+            Unit.color_hex.label('unit_color')
         ).join(
-            ProcedureName, ProcedureName.name == ScheduleResults.procedure_name
-        ).join(
-            SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
+            Unit, Unit.id == ScheduleResults.unit_id
         )
 
         if type == 'daily':
@@ -128,9 +123,9 @@ def schedule_results_and_filter(
         if ot_id:
             schedule_results = schedule_results.where(
                 ScheduleResults.ot_id == ot_id)
-        if subspecialty_id:
+        if unit_id:
             schedule_results = schedule_results.where(
-                SubSpecialty.id == subspecialty_id)
+                ScheduleResults.unit_id == unit_id)
         if patient_name:
             schedule_results = schedule_results.where(
                 cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
@@ -145,14 +140,10 @@ def schedule_results_and_filter(
 
         total_data = schedule_results.count()
         schedule_results = schedule_results.all()
-
         ot_data = session.query(Ot).order_by(Ot.id.asc()).all()
-        subspecialties = session.query(SubSpecialty).order_by(
-            SubSpecialty.id.asc()).all()
-        color_map = {sub.description: sub.color_hex for sub in subspecialties}
 
         ot_data_count = {}
-        for result, _, _, _ in schedule_results:
+        for result, _, _ in schedule_results:
             ot_data_count[result.ot_id] = ot_data_count.get(
                 result.ot_id, 0) + 1
 
@@ -171,30 +162,28 @@ def schedule_results_and_filter(
 
         if type == 'daily':
             formatted_results = []
-            for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
+            for result, unit_name, unit_color in schedule_results:
                 get_odc = ot_data_count.get(result.ot_id, 0)
                 result.category = f"OT {result.ot_id}\n{get_odc} Surgeries"
                 result.surgeries = get_odc
                 result.task = f"MRN-{result.mrn}"
-                result.color = color_hex or color_map.get(
-                    sub_specialty_desc, "")
-                result.sub_specialty_desc = sub_specialty_desc
+                result.color = unit_color
+                result.unit_name = unit_name
                 formatted_results.append(result)
         else:
             schedule_by_week = defaultdict(list)
             surgeries_count = defaultdict(int)
-            for result, _, _, _ in schedule_results:
+            for result, _, _ in schedule_results:
                 key = (result.week_id, result.day_id, result.ot_id)
                 surgeries_count[key] += 1
-            for result, sub_specialty_id, color_hex, sub_specialty_desc in schedule_results:
+            for result, unit_name, unit_color in schedule_results:
                 key = (result.week_id, result.day_id, result.ot_id)
                 result.surgeries = surgeries_count[key]
                 result.category = f"OT {result.ot_id}\n{
                     result.surgeries} Surgeries"
                 result.task = f"MRN-{result.mrn}"
-                result.color = color_hex or color_map.get(
-                    sub_specialty_desc, "")
-                result.sub_specialty_desc = sub_specialty_desc
+                result.color = unit_color
+                result.unit_name = unit_name
                 schedule_by_week[(result.week_id, result.month_id)].append(
                     result)
             formatted_results = [
@@ -209,12 +198,12 @@ def schedule_results_and_filter(
         return {
             "total": total_data,
             "schedule": formatted_results,
-            "subspecialty": session.query(SubSpecialty).order_by(SubSpecialty.id.asc()).all(),
-            "surgeon_name_list": surgeon_name_list,
             "all_months": all_months,
             "all_weeks": all_weeks,
             "all_days": session.query(Day).order_by(Day.id.asc()).all(),
             "all_ots": session.query(Ot).order_by(Ot.id.asc()).all(),
+            "units": session.query(Unit).order_by(Unit.id.asc()).all(),
+            "surgeon_name_list": surgeon_name_list,
         }
     except Exception as error:
         send_error_response(error, 'Failed to get schedule result')
