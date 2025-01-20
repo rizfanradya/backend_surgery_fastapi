@@ -56,38 +56,41 @@ def schedule_results_and_filter(
                      ).label('max_year')
         ).first()
 
-        all_months = [
-            {
+        all_months = []
+        all_weeks = []
+
+        if min_year and max_year:
+            all_months.append({
                 "name": f"{datetime(year, month, 1).strftime('%B')} {year}",
                 "month_id": month,
                 "year": year
             }
-            for year in range(int(min_year), int(max_year) + 1)
-            for month in range(1, 13)
-        ]
+                for year in range(int(min_year), int(max_year) + 1)
+                for month in range(1, 13)
+            )
 
-        all_weeks = []
-        for month in range(1, 13):
-            for year in range(int(min_year), int(max_year) + 1):
-                start_date = datetime(year, month, 1)
-                _, days_in_month = monthrange(year, month)
-                end_date = datetime(year, month, days_in_month)
-                current_date = start_date
-                while current_date <= end_date:
-                    if current_date.weekday() == 0:
-                        week_number = (current_date - start_date).days // 7 + 1
-                        week_end = current_date + timedelta(days=4)
-                        if week_end.month != current_date.month:
+            for month in range(1, 13):
+                for year in range(int(min_year), int(max_year) + 1):
+                    start_date = datetime(year, month, 1)
+                    _, days_in_month = monthrange(year, month)
+                    end_date = datetime(year, month, days_in_month)
+                    current_date = start_date
+                    while current_date <= end_date:
+                        if current_date.weekday() == 0:
+                            week_number = (
+                                current_date - start_date).days // 7 + 1
                             week_end = current_date + timedelta(days=4)
-                        all_weeks.append({
-                            "name": f"{current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
-                            "fmt_name": f"Week {week_number}: {current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
-                            "week_id": week_number,
-                            "month_id": current_date.month,
-                            "start_date": current_date,
-                            "end_date": week_end
-                        })
-                    current_date += timedelta(days=1)
+                            if week_end.month != current_date.month:
+                                week_end = current_date + timedelta(days=4)
+                            all_weeks.append({
+                                "name": f"{current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
+                                "fmt_name": f"Week {week_number}: {current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
+                                "week_id": week_number,
+                                "month_id": current_date.month,
+                                "start_date": current_date,
+                                "end_date": week_end
+                            })
+                        current_date += timedelta(days=1)
 
         schedule_results = session.query(
             ScheduleResults,
@@ -377,6 +380,7 @@ def generate_daily_schedule(
 
             schedule_result = ScheduleResultsSchema(
                 run_id=run_id,
+                unit_id=unit_data.id,
                 mrn=str(row[1]),
                 age=row[2],  # type: ignore
                 week_id=matching_week.id,  # type: ignore

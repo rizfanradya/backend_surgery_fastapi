@@ -40,3 +40,4 @@ class Unit(Base):
         'ClashingSubSpecialties',
         back_populates='unit'
     )
+    schedule_results = relationship('ScheduleResults', back_populates='unit')

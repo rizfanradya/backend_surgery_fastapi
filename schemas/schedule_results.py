@@ -5,6 +5,7 @@ from datetime import date, time
 
 class ScheduleResultsSchema(BaseModel):
     run_id: str
+    unit_id: int
     mrn: str
     age: int
     week_id: int

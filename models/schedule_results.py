@@ -35,6 +35,8 @@ class ScheduleResults(Base):
     icu_id = Column(Integer, nullable=False)
     icu_start_time = Column(Time, nullable=False)
     icu_end_time = Column(Time, nullable=False)
+    unit_id = Column(Integer, ForeignKey('unit.id'), nullable=False)
+    unit = relationship('Unit', back_populates='schedule_results')
     week_id = Column(Integer, ForeignKey('week.id'), nullable=False)
     week = relationship('Week', back_populates='schedule_results')
     day_id = Column(Integer, ForeignKey('day.id'), nullable=False)
