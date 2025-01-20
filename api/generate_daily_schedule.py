@@ -48,6 +48,7 @@ def schedule_results_and_filter(
     token: str = Depends(TokenAuthorization)
 ):
     try:
+        current_today = datetime.today()
         min_year, max_year = session.query(
             func.min(extract('year', ScheduleResults.surgery_date)
                      ).label('min_year'),
@@ -107,20 +108,20 @@ def schedule_results_and_filter(
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == week_id, ScheduleResults.month_id == month_id)
             else:
-                if all_weeks:
-                    schedule_results = schedule_results.where(
-                        ScheduleResults.week_id == all_weeks[0]['week_id'],
-                        ScheduleResults.month_id == all_weeks[0]['month_id'])
+                current_week_id = (
+                    current_today - datetime(current_today.year, current_today.month, 1)).days // 7 + 1
+                schedule_results = schedule_results.where(
+                    ScheduleResults.week_id == current_week_id,
+                    ScheduleResults.month_id == current_today.month)
         if type == 'monthly':
             if month_id and year:
                 schedule_results = schedule_results.where(
                     ScheduleResults.month_id == month_id,
                     extract('year', ScheduleResults.surgery_date) == year)
             else:
-                if all_months:
-                    schedule_results = schedule_results.where(
-                        ScheduleResults.month_id == all_months[0]['month_id'],
-                        extract('year', ScheduleResults.surgery_date) == all_months[0]['year'])
+                schedule_results = schedule_results.where(
+                    ScheduleResults.month_id == current_today.month,
+                    extract('year', ScheduleResults.surgery_date) == current_today.year)
         if ot_id:
             schedule_results = schedule_results.where(
                 ScheduleResults.ot_id == ot_id)
