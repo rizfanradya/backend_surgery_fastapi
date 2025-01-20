@@ -35,12 +35,12 @@ router = APIRouter()
 
 @router.get('/result')
 def schedule_results_and_filter(
+    type: Literal['daily', 'weekly', 'monthly'] = 'daily',
     surgery_date: Optional[date] = None,
-    ot_id: Optional[int] = None,
     week_id: Optional[int] = None,
     month_id: Optional[int] = None,
     year: Optional[int] = None,
-    type: Literal['daily', 'weekly', 'monthly'] = 'daily',
+    ot_id: Optional[int] = None,
     subspecialty_id: Optional[str] = None,
     surgeon_name: Optional[str] = None,
     patient_name: Optional[str] = None,
@@ -71,17 +71,13 @@ def schedule_results_and_filter(
                 start_date = datetime(year, month, 1)
                 _, days_in_month = monthrange(year, month)
                 end_date = datetime(year, month, days_in_month)
-
                 current_date = start_date
                 while current_date <= end_date:
                     if current_date.weekday() == 0:
                         week_number = (current_date - start_date).days // 7 + 1
                         week_end = current_date + timedelta(days=4)
-
                         if week_end.month != current_date.month:
-                            week_end = datetime(current_date.year, current_date.month, monthrange(
-                                current_date.year, current_date.month)[1])
-
+                            week_end = current_date + timedelta(days=4)
                         all_weeks.append({
                             "name": f"{current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
                             "fmt_name": f"Week {week_number}: {current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
@@ -103,24 +99,9 @@ def schedule_results_and_filter(
             SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
         )
 
-        if type == 'daily' and surgery_date:
+        if type == 'daily':
             schedule_results = schedule_results.where(
-                ScheduleResults.surgery_date == surgery_date)
-        if type == 'monthly' and month_id:
-            schedule_results = schedule_results.where(
-                ScheduleResults.month_id == month_id)
-        if ot_id:
-            schedule_results = schedule_results.where(
-                ScheduleResults.ot_id == ot_id)
-        if subspecialty_id:
-            schedule_results = schedule_results.where(
-                SubSpecialty.id == subspecialty_id)
-        if patient_name:
-            schedule_results = schedule_results.where(
-                cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
-        if surgeon_name:
-            schedule_results = schedule_results.where(
-                ScheduleResults.surgeon_name == surgeon_name)
+                ScheduleResults.surgery_date == (surgery_date if surgery_date else date.today()))
         if type == 'weekly':
             if week_id and month_id:
                 schedule_results = schedule_results.where(
@@ -140,6 +121,18 @@ def schedule_results_and_filter(
                     schedule_results = schedule_results.where(
                         ScheduleResults.month_id == all_months[0]['month_id'],
                         extract('year', ScheduleResults.surgery_date) == all_months[0]['year'])
+        if ot_id:
+            schedule_results = schedule_results.where(
+                ScheduleResults.ot_id == ot_id)
+        if subspecialty_id:
+            schedule_results = schedule_results.where(
+                SubSpecialty.id == subspecialty_id)
+        if patient_name:
+            schedule_results = schedule_results.where(
+                cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
+        if surgeon_name:
+            schedule_results = schedule_results.where(
+                ScheduleResults.surgeon_name == surgeon_name)
 
         surgeon_name_list = [
             result.surgeon_name for result, *_ in schedule_results.distinct(
