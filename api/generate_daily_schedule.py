@@ -9,6 +9,7 @@ from utils.parse_date import parse_date
 from utils.add_duration import add_duration
 from utils.calculate_week_name import calculate_week_name
 from datetime import date, datetime, time, timedelta
+from calendar import monthrange
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
@@ -47,6 +48,50 @@ def schedule_results_and_filter(
     token: str = Depends(TokenAuthorization)
 ):
     try:
+        min_year, max_year = session.query(
+            func.min(extract('year', ScheduleResults.surgery_date)
+                     ).label('min_year'),
+            func.max(extract('year', ScheduleResults.surgery_date)
+                     ).label('max_year')
+        ).first()
+
+        all_months = [
+            {
+                "name": f"{datetime(year, month, 1).strftime('%B')} {year}",
+                "month_id": month,
+                "year": year
+            }
+            for year in range(int(min_year), int(max_year) + 1)
+            for month in range(1, 13)
+        ]
+
+        all_weeks = []
+        for month in range(1, 13):
+            for year in range(int(min_year), int(max_year) + 1):
+                start_date = datetime(year, month, 1)
+                _, days_in_month = monthrange(year, month)
+                end_date = datetime(year, month, days_in_month)
+
+                current_date = start_date
+                while current_date <= end_date:
+                    if current_date.weekday() == 0:
+                        week_number = (current_date - start_date).days // 7 + 1
+                        week_end = current_date + timedelta(days=4)
+
+                        if week_end.month != current_date.month:
+                            week_end = datetime(current_date.year, current_date.month, monthrange(
+                                current_date.year, current_date.month)[1])
+
+                        all_weeks.append({
+                            "name": f"{current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
+                            "fmt_name": f"Week {week_number}: {current_date.strftime('%d %b')} - {week_end.strftime('%d %b %Y')}",
+                            "week_id": week_number,
+                            "month_id": current_date.month,
+                            "start_date": current_date,
+                            "end_date": week_end
+                        })
+                    current_date += timedelta(days=1)
+
         schedule_results = session.query(
             ScheduleResults,
             ProcedureName.sub_specialty_id,
@@ -56,48 +101,6 @@ def schedule_results_and_filter(
             ProcedureName, ProcedureName.name == ScheduleResults.procedure_name
         ).join(
             SubSpecialty, SubSpecialty.id == ProcedureName.sub_specialty_id
-        )
-
-        all_weeks = sorted(
-            [
-                {
-                    "name": f"{week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
-                    "fmt_name": f"Week {week.week_id}: {week.start_date.strftime('%d')} - {week.end_date.strftime('%d %b %Y')}",
-                    "week_id": week.week_id,
-                    "month_id": week.month_id,
-                    "start_date": week.start_date,
-                    "end_date": week.end_date,
-                }
-                for week in session.query(
-                    ScheduleResults.week_id,
-                    ScheduleResults.month_id,
-                    func.min(ScheduleResults.surgery_date).label('start_date'),
-                    func.max(ScheduleResults.surgery_date).label('end_date')
-                ).group_by(ScheduleResults.week_id, ScheduleResults.month_id).all()
-            ],
-            key=lambda x: (x['month_id'], x['week_id']), reverse=True
-        )
-        all_months = sorted(
-            [
-                {
-                    "name": f"{month.name} {month.year}",
-                    "month_id": month.id,
-                    "year": month.year
-                }
-                for month in session.query(
-                    Month.id,
-                    Month.name,
-                    extract('year', ScheduleResults.surgery_date).label('year')
-                ).join(
-                    ScheduleResults, ScheduleResults.month_id == Month.id
-                ).distinct(
-                    Month.id, extract('year', ScheduleResults.surgery_date)
-                ).order_by(
-                    extract('year', ScheduleResults.surgery_date).desc(
-                    ), Month.id.desc()
-                ).all()
-            ],
-            key=lambda x: (x['year'], x['month_id']), reverse=True
         )
 
         if type == 'daily' and surgery_date:
@@ -115,6 +118,9 @@ def schedule_results_and_filter(
         if patient_name:
             schedule_results = schedule_results.where(
                 cast(ScheduleResults.booked_by, String).ilike(f'%{patient_name}%'))
+        if surgeon_name:
+            schedule_results = schedule_results.where(
+                ScheduleResults.surgeon_name == surgeon_name)
         if type == 'weekly':
             if week_id and month_id:
                 schedule_results = schedule_results.where(
@@ -139,11 +145,8 @@ def schedule_results_and_filter(
             result.surgeon_name for result, *_ in schedule_results.distinct(
                 ScheduleResults.surgeon_name).all()
         ]
-        if surgeon_name:
-            schedule_results = schedule_results.where(
-                ScheduleResults.surgeon_name == surgeon_name)
 
-        total = schedule_results.count()
+        total_data = schedule_results.count()
         schedule_results = schedule_results.all()
 
         ot_data = session.query(Ot).order_by(Ot.id.asc()).all()
@@ -206,20 +209,18 @@ def schedule_results_and_filter(
                 for (week, month), data in schedule_by_week.items()
             ]
 
-        all_days = session.query(Day).order_by(Day.id.asc()).all()
-
         return {
-            "total": total,
+            "total": total_data,
             "schedule": formatted_results,
-            "subspecialty": subspecialties,
+            "subspecialty": session.query(SubSpecialty).order_by(SubSpecialty.id.asc()).all(),
             "surgeon_name_list": surgeon_name_list,
             "all_months": all_months,
             "all_weeks": all_weeks,
-            "all_days": all_days,
-            "all_ots": ot_data,
+            "all_days": session.query(Day).order_by(Day.id.asc()).all(),
+            "all_ots": session.query(Ot).order_by(Ot.id.asc()).all(),
         }
     except Exception as error:
-        send_error_response(error, 'Failed get schedule result')
+        send_error_response(error, 'Failed to get schedule result')
 
 
 @router.get('/surgery-details/{mrn}')
