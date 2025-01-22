@@ -494,9 +494,6 @@ def generate_masterplan(
     excel_data = BytesIO(contents)
     workbook = load_workbook(excel_data)
     sheet = workbook.active
-    surgeries = []
-    ot_assignments = []
-    ot_assignments_2 = []
 
     week_numbers = set()
     current_date = start_date_dt
@@ -518,6 +515,10 @@ def generate_masterplan(
         session.query(Week.id).where(Week.id.in_(
             available_week_ids))
     ).all()
+
+    surgeries = []
+    ot_assignments = []
+    ot_assignments_2 = []
 
     try:
         for row_idx, row in enumerate(
