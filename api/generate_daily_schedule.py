@@ -28,6 +28,7 @@ from models.week import Week
 from models.day import Day
 from models.status import Status
 from models.month import Month
+from models.ot_assignment import OtAssignment
 
 router = APIRouter()
 
@@ -306,6 +307,9 @@ def generate_daily_schedule(
             cast(Unit.name, String).ilike(f"%{row[8]}%")).first()
         if unit_data is None:
             continue
+
+        ots_by_mssp_unit = session.query(OtAssignment).where(
+            OtAssignment.mssp_id == master_plan.id, OtAssignment.unit_id == unit_data.id).all()
 
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
