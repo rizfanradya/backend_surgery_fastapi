@@ -59,7 +59,7 @@ def schedule_results_and_filter(
         all_months = []
         all_weeks = []
         if min_year and max_year:
-            all_months.append({
+            all_months.extend({
                 "name": f"{datetime(year, month, 1).strftime('%B')} {year}",
                 "month_id": month,
                 "year": year
@@ -156,6 +156,10 @@ def schedule_results_and_filter(
             (week['week_id'], week['month_id']): week['fmt_name']
             for week in all_weeks
         }
+        month_year_map = {
+            (month['year'], month['month_id']): month['name']
+            for month in all_months
+        }
         fmt_week_date_map = {
             (week['week_id'], week['month_id']): week['name']
             for week in all_weeks
@@ -179,32 +183,34 @@ def schedule_results_and_filter(
                 surgeries_count[key] += 1
             for result, unit_name, unit_color in schedule_results:
                 key = (result.week_id, result.day_id, result.ot_id)
+                year_info = result.surgery_date.year
                 result.surgeries = surgeries_count[key]
                 result.category = f"OT {result.ot_id}\n{
                     result.surgeries} Surgeries"
                 result.task = f"MRN-{result.mrn}"
                 result.color = unit_color
                 result.unit_name = unit_name
-                schedule_by_week[(result.week_id, result.month_id)].append(
+                schedule_by_week[(result.week_id, result.month_id, year_info)].append(
                     result)
             formatted_results = [
                 {
                     "week": week_date_map.get((week, month), f"Week {week}"),
                     "fmt_week": fmt_week_date_map.get((week, month), f"Week {week}"),
+                    "month": month_year_map.get((year_info, month), f"{month} {year_info}"),
                     "data": data
                 }
-                for (week, month), data in schedule_by_week.items()
+                for (week, month, year_info), data in schedule_by_week.items()
             ]
 
         return {
             "total": total_data,
-            "schedule": formatted_results,
             "all_months": all_months,
             "all_weeks": all_weeks,
             "all_days": session.query(Day).order_by(Day.id.asc()).all(),
             "all_ots": session.query(Ot).order_by(Ot.id.asc()).all(),
             "units": session.query(Unit).order_by(Unit.id.asc()).all(),
             "surgeon_name_list": surgeon_name_list,
+            "schedule": formatted_results,
         }
     except Exception as error:
         send_error_response(error, 'Failed to get schedule result')
@@ -274,6 +280,10 @@ def generate_daily_schedule(
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
 
+    ot_unit_map = {
+        assignment.ot_id: assignment.unit_id
+        for assignment in session.query(OtAssignment).where(OtAssignment.mssp_id == master_plan.id).all()
+    }
     available_ots = session.scalars(
         session.query(Ot.id).order_by(Ot.id.asc())).all()
 
@@ -308,8 +318,10 @@ def generate_daily_schedule(
         if unit_data is None:
             continue
 
-        ots_by_mssp_unit = session.query(OtAssignment).where(
-            OtAssignment.mssp_id == master_plan.id, OtAssignment.unit_id == unit_data.id).all()
+        unit_ots = [ot_id for ot_id, unit_id in ot_unit_map.items()
+                    if unit_id == unit_data.id]
+        if not unit_ots:
+            continue
 
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
@@ -328,7 +340,7 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        sorted_ots = sorted(available_ots, key=lambda ot: ot_load_balance[ot])
+        sorted_ots = sorted(unit_ots, key=lambda ot: ot_load_balance[ot])
         for ot_ids in sorted_ots:
             operation_date = operation_dates[date_index % len(
                 operation_dates)]
