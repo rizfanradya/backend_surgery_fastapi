@@ -280,12 +280,12 @@ def generate_daily_schedule(
 
     run_id = f"RUN-{int(datetime.now().timestamp())}"
 
+    available_ots = session.scalars(
+        session.query(Ot.id).order_by(Ot.id.asc())).all()
     ot_unit_map = {
         assignment.ot_id: assignment.unit_id
         for assignment in session.query(OtAssignment).where(OtAssignment.mssp_id == master_plan.id).all()
     }
-    available_ots = session.scalars(
-        session.query(Ot.id).order_by(Ot.id.asc())).all()
 
     operation_dates = []
     current_date = start_date_dt
@@ -318,11 +318,6 @@ def generate_daily_schedule(
         if unit_data is None:
             continue
 
-        unit_ots = [ot_id for ot_id, unit_id in ot_unit_map.items()
-                    if unit_id == unit_data.id]
-        if not unit_ots:
-            continue
-
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
             send_error_response(
@@ -340,7 +335,7 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        sorted_ots = sorted(unit_ots, key=lambda ot: ot_load_balance[ot])
+        sorted_ots = sorted(available_ots, key=lambda ot: ot_load_balance[ot])
         for ot_ids in sorted_ots:
             operation_date = operation_dates[date_index % len(
                 operation_dates)]
