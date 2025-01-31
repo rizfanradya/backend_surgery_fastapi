@@ -318,6 +318,9 @@ def generate_daily_schedule(
         if unit_data is None:
             continue
 
+        if unit_data.id not in ot_unit_map.values():
+            continue
+
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
             send_error_response(
@@ -335,7 +338,15 @@ def generate_daily_schedule(
             procedure_name = procedure_name.split("-", 1)[-1].strip()
         procedure_name = f"PROCEDURE - {procedure_name}"
 
-        sorted_ots = sorted(available_ots, key=lambda ot: ot_load_balance[ot])
+        sorted_ots = sorted(
+            [
+                ot_id for ot_id, unit_id
+                in ot_unit_map.items()
+                if unit_id == unit_data.id
+            ],
+            key=lambda
+            ot: ot_load_balance[ot]
+        )
         for ot_ids in sorted_ots:
             operation_date = operation_dates[date_index % len(
                 operation_dates)]
