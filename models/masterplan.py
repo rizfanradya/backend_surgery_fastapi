@@ -2,6 +2,7 @@ from utils.database import Base
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, DateTime, Numeric, Date
 from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey
 import pytz
 from datetime import datetime
 
@@ -19,5 +20,7 @@ class Masterplan(Base):
     uploaded_file = Column(String(length=255))
     start_date = Column(Date)
     end_date = Column(Date)
+    status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
+    status = relationship('Status', back_populates='masterplan')
     ot_assignment = relationship('OtAssignment', back_populates='masterplan')
     surgery = relationship('Surgery', back_populates='masterplan')

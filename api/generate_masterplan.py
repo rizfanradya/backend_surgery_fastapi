@@ -67,7 +67,7 @@ def masterplan(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    query = session.query(Masterplan)
+    query = session.query(Masterplan).options(joinedload(Masterplan.status))
     column_map = {
         'id': Masterplan.id,
         'created_at': Masterplan.created_at,
@@ -83,7 +83,19 @@ def masterplan(
     return {
         "total": total,
         "schedule_resource": session.query(ScheduleResource).order_by(ScheduleResource.id.asc()).all(),
-        "data": query
+        "data": [
+            {
+                "id": masterplan.id,
+                "created_at": masterplan.created_at,
+                "description": masterplan.description,
+                "objective_value": masterplan.objective_value,
+                "uploaded_file": masterplan.uploaded_file,
+                "status": {
+                    "id": masterplan.status_id,
+                    "description": masterplan.status.description
+                } if masterplan.status else None
+            } for masterplan in query
+        ]
     }
 
 
@@ -436,12 +448,44 @@ def generate_masterplan(
             'Ultra Clean ot type not found in database.'
         )
 
-    status = session.query(Status).where(
+    status_available = session.query(Status).where(
         Status.description.ilike('available')
     ).first()
-    if status is None:
+    if status_available is None:
         send_error_response(
             'Status "Available" not found in database.'
+        )
+
+    status_pending = session.query(Status).where(
+        Status.description.ilike('pending')
+    ).first()
+    if status_pending is None:
+        send_error_response(
+            'Status "Pending" not found in database.'
+        )
+
+    status_process = session.query(Status).where(
+        Status.description.ilike('process')
+    ).first()
+    if status_process is None:
+        send_error_response(
+            'Status "Process" not found in database.'
+        )
+
+    status_completed = session.query(Status).where(
+        Status.description.ilike('completed')
+    ).first()
+    if status_completed is None:
+        send_error_response(
+            'Status "Completed" not found in database.'
+        )
+
+    status_failed = session.query(Status).where(
+        Status.description.ilike('failed')
+    ).first()
+    if status_failed is None:
+        send_error_response(
+            'Status "Failed" not found in database.'
         )
 
     check_excell_format(file, session, token)
@@ -474,6 +518,7 @@ def generate_masterplan(
     contents = file.file.read()
     new_masterplan.uploaded_file = filename  # type: ignore
     new_masterplan.description = mssp_desc  # type: ignore
+    new_masterplan.status_id = status_pending.id
     session.commit()
     try:
         with open(file_path, 'wb') as f:
@@ -481,6 +526,8 @@ def generate_masterplan(
     except Exception as error:
         send_error_response(str(error), 'Failed to save file')
 
+    new_masterplan.status_id = status_process.id
+    session.commit()
     procedure_names = session.query(ProcedureName).all()
     procedure_name_map = {p.name: p.id for p in procedure_names}
 
@@ -505,7 +552,7 @@ def generate_masterplan(
     for week_number in sorted(week_numbers):
         week_name = f"Week {week_number}"
         week = session.query(Week).where(
-            Week.name == week_name, Week.status_id == status.id).first()
+            Week.name == week_name, Week.status_id == status_available.id).first()
         if week:
             available_week_ids.append(week.id)
     if not available_week_ids:
@@ -733,10 +780,12 @@ def generate_masterplan(
 
         session.add_all(surgeries)
         session.add_all(ot_assignments)
+        new_masterplan.status_id = status_completed.id
         session.commit()
         new_masterplan.id
         return new_masterplan
     except Exception as error:
+        new_masterplan.status_id = status_failed.id
         session.delete(new_masterplan)
         session.commit()
         send_error_response(str(error), 'Cannot create master plan')

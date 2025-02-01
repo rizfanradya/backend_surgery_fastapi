@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
 from datetime import date
+from .status import StatusSchema
 
 
 class MasterPlanSchema(BaseModel):
@@ -13,6 +14,7 @@ class MasterPlanSchema(BaseModel):
 
 class BaseSchema(MasterPlanSchema):
     id: int
+    status: StatusSchema
 
     class Config:
         from_attributes = True
