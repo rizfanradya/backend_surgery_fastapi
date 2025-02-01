@@ -17,7 +17,8 @@ from utils.config import (
     IP_SERVER_HOSTNAME,
     SERVER_PORT,
     EMAIL_PASSWORD,
-    EMAIL_USER
+    EMAIL_USER,
+    LINK_FRONTEND
 )
 
 router = APIRouter()
@@ -143,7 +144,7 @@ async def email_otp(id: int, session: Session = Depends(get_db)):
                         <div class="flex flex-col items-center justify-center w-full gap-4 my-20 tracking-wide">
                             <h1 class="text-4xl font-bold">Verify Your Email</h1>
                             <p class="font-semibold text-md">Click link for verify your email</p>
-                            <a href="http://{IP_SERVER_HOSTNAME}:{SERVER_PORT}/api/email_verify/{encode_otp}" target="_blank" class="px-8 py-2 font-bold text-white bg-blue-500 rounded-md">Verify Now</a>
+                            <a href="{LINK_FRONTEND}/email_verify/{encode_otp}" target="_blank" class="px-8 py-2 font-bold text-white bg-blue-500 rounded-md">Verify Now</a>
                         </div>
                     </body>
                 </html>
