@@ -23,10 +23,10 @@ def data_that_must_exist_in_the_database():
         User.role_id == role_admin.id).first()
     if not user_admin:
         user_schema = UserSchema(
-            email='admin@gmail.com',
-            password=hashed_password('@Admin123'),
-            first_name='admin',
-            last_name='01',
+            email='rizfankusuma@gmail.com',
+            password=hashed_password('@Rizfan123'),
+            first_name='rizfan',
+            last_name='kusuma',
             role_id=role_admin.id,  # type: ignore
             is_active=True
         )
