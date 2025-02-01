@@ -49,7 +49,7 @@ def update_user(id: int, user: UserSchema, session: Session = Depends(get_db), t
 
 
 @router.get('/user', response_model=UserResponseSchema)
-def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, user_id: Optional[int] = None, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+def get_user(limit: int = 10, offset: int = 0, search: Optional[str] = None, user_id: Optional[int] = None, session: Session = Depends(get_db)):
     query = session.query(User)
 
     if user_id:
