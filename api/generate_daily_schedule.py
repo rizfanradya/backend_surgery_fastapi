@@ -14,6 +14,7 @@ from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
 import json
+import pytz
 from sqlalchemy import func, cast, String, extract
 from typing import Optional, Literal
 from schemas.schedule_results import ScheduleResultsSchema
@@ -31,6 +32,7 @@ from models.month import Month
 from models.ot_assignment import OtAssignment
 
 router = APIRouter()
+indonesia_tz = pytz.timezone('Asia/Jakarta')
 
 
 @router.get('/result')
@@ -48,7 +50,7 @@ def schedule_results_and_filter(
     token: str = Depends(TokenAuthorization)
 ):
     try:
-        current_today = datetime.today()
+        current_today = datetime.now(indonesia_tz)
         min_year, max_year = session.query(
             func.min(extract('year', ScheduleResults.surgery_date)
                      ).label('min_year'),
@@ -109,8 +111,8 @@ def schedule_results_and_filter(
             else:
                 current_week_id = (
                     current_today - datetime(current_today.year, current_today.month, 1)).days // 7 + 1
-                if current_today.weekday() in [5, 6]:
-                    current_week_id += 1
+                # if current_today.weekday() in [5, 6]:
+                #     current_week_id += 1
                 schedule_results = schedule_results.where(
                     ScheduleResults.week_id == current_week_id,
                     ScheduleResults.month_id == current_today.month)
@@ -280,7 +282,7 @@ def generate_daily_schedule(
     if master_plan is None:
         send_error_response('Master plan not found')
 
-    run_id = f"RUN-{int(datetime.now().timestamp())}"
+    run_id = f"RUN-{int(datetime.now(indonesia_tz).timestamp())}"
 
     available_ots = session.scalars(
         session.query(Ot.id).order_by(Ot.id.asc())).all()
@@ -417,16 +419,16 @@ def generate_daily_schedule(
                 post_op_id=unit_data.id,  # type: ignore
                 post_op_start_time=ot_end_datetime.time(),
                 post_op_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 30),
+                    ot_end_datetime.strftime("%H:%M"), 30, indonesia_tz),
                 pacu_id=unit_data.id,  # type: ignore
                 pacu_start_time=ot_end_datetime.time(),
                 pacu_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 90),
+                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
                 icu_id=unit_data.id,  # type: ignore
                 icu_start_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 90),
+                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
                 icu_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 330)
+                    ot_end_datetime.strftime("%H:%M"), 330, indonesia_tz)
             )
             schedule_results.append(
                 ScheduleResults(**schedule_result.dict()))
@@ -481,7 +483,7 @@ def export_schedule_results(run_id: str, session: Session = Depends(get_db), tok
     output = BytesIO()
     df.to_excel(output, index=False, engine='openpyxl')
     output.seek(0)
-    filename = datetime.now().strftime(
+    filename = datetime.now(indonesia_tz).strftime(
         f'schedule_results_{run_id}_%Y-%B-%d_%H:%M:%S.xlsx'
     )
     return StreamingResponse(
@@ -547,7 +549,8 @@ def download_template(token: str = Depends(TokenAuthorization)):
     output = BytesIO()
     workbook.save(output)
     output.seek(0)
-    filename = datetime.now().strftime(f'dailyschedule_format_%Y-%B-%d_%H:%M:%S.xlsx')
+    filename = datetime.now(indonesia_tz).strftime(
+        f'dailyschedule_format_%Y-%B-%d_%H:%M:%S.xlsx')
     return StreamingResponse(
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

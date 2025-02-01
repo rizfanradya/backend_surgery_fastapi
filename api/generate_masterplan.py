@@ -50,6 +50,7 @@ from models.status import Status
 from models.schedule_resource import ScheduleResource
 
 router = APIRouter()
+wib_timezone = pytz.timezone("Asia/Jakarta")
 
 
 @router.get('/list-master')
@@ -450,7 +451,6 @@ def generate_masterplan(
         func.count(Objectives.id)
     ).one()
     average_weight_obj = total_weight / num_objectives if num_objectives > 0 else 0
-    wib_timezone = pytz.timezone("Asia/Jakarta")
     current_timestamp = datetime.now(
         wib_timezone).strftime('%Y-%m-%d %H:%M:%S')
 
@@ -926,7 +926,8 @@ def download_template(token: str = Depends(TokenAuthorization)):
     output = BytesIO()
     workbook.save(output)
     output.seek(0)
-    filename = datetime.now().strftime(f'masterplan_format_%Y-%B-%d_%H:%M:%S.xlsx')
+    filename = datetime.now(wib_timezone).strftime(
+        f'masterplan_format_%Y-%B-%d_%H:%M:%S.xlsx')
     return StreamingResponse(
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
