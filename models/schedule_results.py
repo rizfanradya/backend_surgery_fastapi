@@ -43,3 +43,7 @@ class ScheduleResults(Base):
     day = relationship('Day', back_populates='schedule_results')
     month_id = Column(Integer, ForeignKey('month.id'), nullable=False)
     month = relationship('Month', back_populates='schedule_results')
+    schedule_queue_id = Column(Integer, ForeignKey(
+        'schedule_queue.id'), nullable=False)
+    schedule_queue = relationship(
+        'ScheduleQueue', back_populates='schedule_results')

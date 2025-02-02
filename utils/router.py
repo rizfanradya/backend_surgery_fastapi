@@ -31,6 +31,7 @@ import api.role as role
 import api.clashing_subspecialties as clashing_subspecialties
 import api.schedule_resource as schedule_resource
 import api.month as month
+import api.schedule_queue as schedule_queue
 
 routers = [
     (auth.router, "Auth API", "/api"),
@@ -63,6 +64,7 @@ routers = [
     (clashing_subspecialties.router, "Clashing Sub Specialties API", "/api"),
     (equipment_requirement.router, "Equipment Requirement API", "/api"),
     (schedule_resource.router, "Schedule Resource API", "/api"),
+    (schedule_queue.router, "Schedule Queue API", "/api"),
     (
         equipment_requirement_status.router,
         "Equipment Requirement Status API",

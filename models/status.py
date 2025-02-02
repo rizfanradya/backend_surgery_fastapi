@@ -11,6 +11,7 @@ class Status(Base):
     description = Column(String(length=255), nullable=False)
     equipment_msp = relationship('EquipmentMsp', back_populates='status')
     masterplan = relationship('Masterplan', back_populates='status')
+    schedule_queue = relationship('ScheduleQueue', back_populates='status')
     ot = relationship('Ot', back_populates='status')
     week = relationship('Week', back_populates='status')
     month = relationship('Month', back_populates='status')
