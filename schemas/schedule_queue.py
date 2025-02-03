@@ -1,12 +1,10 @@
 from pydantic import BaseModel
-from typing import List, Optional
-from decimal import Decimal
-from datetime import date
+from typing import List
 from .status import StatusSchema
 
 
 class ScheduleQueueSchema(BaseModel):
-    run_id: int
+    run_id: str
 
 
 class BaseSchema(ScheduleQueueSchema):

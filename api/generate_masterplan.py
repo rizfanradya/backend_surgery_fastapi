@@ -504,6 +504,7 @@ def generate_masterplan(
         end_date=end_date
     )
     new_masterplan = Masterplan(**new_masterplan_schema.dict())
+    new_masterplan.status_id = status_pending.id
     session.add(new_masterplan)
     session.commit()
 
@@ -518,7 +519,6 @@ def generate_masterplan(
     contents = file.file.read()
     new_masterplan.uploaded_file = filename  # type: ignore
     new_masterplan.description = mssp_desc  # type: ignore
-    new_masterplan.status_id = status_pending.id
     session.commit()
     try:
         with open(file_path, 'wb') as f:

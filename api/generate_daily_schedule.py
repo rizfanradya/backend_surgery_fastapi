@@ -15,10 +15,12 @@ from pandas import DataFrame
 from io import BytesIO
 import json
 import pytz
+import os
 from sqlalchemy import func, cast, String, extract
 from typing import Optional, Literal
 from schemas.schedule_results import ScheduleResultsSchema
 from schemas.generate_daily_schedule import ScheduleResourceSchema
+from schemas.schedule_queue import ScheduleQueueSchema
 from models.masterplan import Masterplan
 from models.schedule_results import ScheduleResults
 from models.ot import Ot
@@ -30,6 +32,7 @@ from models.day import Day
 from models.status import Status
 from models.month import Month
 from models.ot_assignment import OtAssignment
+from models.schedule_queue import ScheduleQueue
 
 router = APIRouter()
 indonesia_tz = pytz.timezone('Asia/Jakarta')
@@ -253,20 +256,6 @@ def generate_daily_schedule(
     except Exception:
         pass
 
-    status = session.query(Status).where(
-        Status.description.ilike('available')
-    ).first()
-    if status is None:
-        send_error_response(
-            'Status "Available" not found in database.'
-        )
-
-    check_excell_format(file, session, token)
-    contents = file.file.read()
-    excel_data = BytesIO(contents)
-    workbook = load_workbook(excel_data)
-    sheet = workbook.active
-
     start_date_dt = parse_date(start_date)
     end_date_dt = parse_date(end_date)
 
@@ -277,12 +266,92 @@ def generate_daily_schedule(
     if start_date_dt > end_date_dt:
         send_error_response('Start date cannot be after end date')
 
+    status_pending = session.query(Status).where(
+        Status.description.ilike('pending')
+    ).first()
+    if status_pending is None:
+        send_error_response(
+            'Status "Pending" not found in database.'
+        )
+
+    status_process = session.query(Status).where(
+        Status.description.ilike('process')
+    ).first()
+    if status_process is None:
+        send_error_response(
+            'Status "Process" not found in database.'
+        )
+
+    status_completed = session.query(Status).where(
+        Status.description.ilike('completed')
+    ).first()
+    if status_completed is None:
+        send_error_response(
+            'Status "Completed" not found in database.'
+        )
+
+    status_failed = session.query(Status).where(
+        Status.description.ilike('failed')
+    ).first()
+    if status_failed is None:
+        send_error_response(
+            'Status "Failed" not found in database.'
+        )
+
     master_plan = session.query(Masterplan).where(
         Masterplan.id == master_plan_id).first()
     if master_plan is None:
         send_error_response('Master plan not found')
 
+    check_excell_format(file, session, token)
     run_id = f"RUN-{int(datetime.now(indonesia_tz).timestamp())}"
+
+    try:
+        run_ids = session.query(ScheduleResults.run_id).where(
+            ScheduleResults.surgery_date.in_([start_date, end_date])
+        ).distinct().all()
+        run_id_list = [run_id[0] for run_id in run_ids]
+        if run_id_list:
+            schedule_queue_ids = session.query(ScheduleResults.schedule_queue_id).where(
+                ScheduleResults.run_id.in_(run_id_list)
+            ).distinct().all()
+            schedule_queue_id_list = [sq[0] for sq in schedule_queue_ids]
+            session.query(ScheduleResults).where(ScheduleResults.run_id.in_(
+                run_id_list)).delete(synchronize_session=False)
+            if schedule_queue_id_list:
+                session.query(ScheduleQueue).where(ScheduleQueue.id.in_(
+                    schedule_queue_id_list)).delete(synchronize_session=False)
+            session.commit()
+    except Exception as error:
+        send_error_response(error, 'Failed to remove old schedule result')
+
+    new_schedule_queue_schema = ScheduleQueueSchema(run_id=run_id)
+    new_schedule_queue = ScheduleQueue(**new_schedule_queue_schema.dict())
+    new_schedule_queue.status_id = status_pending.id
+    session.add(new_schedule_queue)
+    session.commit()
+
+    abs_path = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(abs_path))
+    upload_dir = os.path.join(base_dir, 'uploads', 'daily_schedule')
+    os.makedirs(upload_dir, exist_ok=True)
+    file_extension = file.filename.split('.')[-1]
+    filename = f'{new_schedule_queue.id}.{file_extension}'
+    file_path = os.path.join(upload_dir, filename)
+    contents = file.file.read()
+    new_schedule_queue.uploaded_file = filename
+    session.commit()
+    try:
+        with open(file_path, 'wb') as f:
+            f.write(contents)
+    except Exception as error:
+        send_error_response(str(error), 'Failed to save file')
+
+    new_schedule_queue.status_id = status_process.id
+    session.commit()
+    excel_data = BytesIO(contents)
+    workbook = load_workbook(excel_data)
+    sheet = workbook.active
 
     available_ots = session.scalars(
         session.query(Ot.id).order_by(Ot.id.asc())).all()
@@ -303,17 +372,6 @@ def generate_daily_schedule(
     schedule_results = []
     date_index = 0
     ot_load_balance = {ot_id: 0 for ot_id in available_ots}
-
-    try:
-        run_ids = session.query(ScheduleResults.run_id).where(
-            ScheduleResults.surgery_date.in_([start_date, end_date])).distinct().all()
-        run_id_list = [run_id[0] for run_id in run_ids]
-        if run_id_list:
-            session.query(ScheduleResults).where(ScheduleResults.run_id.in_(
-                run_id_list)).delete(synchronize_session=False)
-        session.commit()
-    except Exception as error:
-        send_error_response(error, 'Failed to remove old schedule result')
 
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
@@ -395,6 +453,7 @@ def generate_daily_schedule(
 
             schedule_result = ScheduleResultsSchema(
                 run_id=run_id,
+                schedule_queue_id=new_schedule_queue.id,
                 unit_id=unit_data.id,
                 mrn=str(row[1]),
                 age=row[2],  # type: ignore
@@ -438,9 +497,12 @@ def generate_daily_schedule(
     file.file.seek(0)
     try:
         session.add_all(schedule_results)
+        new_schedule_queue.status_id = status_completed.id
         session.commit()
         return {"run_id": run_id, "message": "Schedule generated successfully"}
     except Exception as error:
+        new_schedule_queue.status_id = status_failed.id
+        session.commit()
         send_error_response(str(error), 'Cannot create daily schedule')
 
 
