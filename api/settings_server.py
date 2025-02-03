@@ -106,25 +106,22 @@ def truncate_constraints(session: Session = Depends(get_db), token: str = Depend
 
 
 @router.get('/terminate_connections')
-def terminate_db_connections(token: str = Depends(TokenAuthorization)):
-    try:
-        command = """
+def terminate_db_connections(db: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    """
         docker exec postgres psql -U hctm_surgery -d postgres -c "
         SELECT pg_terminate_backend(pid)
         FROM pg_stat_activity
         WHERE datname = 'hctm_surgery';
-        "
-        """
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-            text=True
-        )
-        stdout, stderr = process.communicate()
-        if process.returncode != 0:
-            raise RuntimeError(f"Failed to terminate connections: {stderr}")
-        return {"message": "All connections to hctm_surgery have been terminated.", "output": stdout}
+    """
+    try:
+        db.execute(text("""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = 'hctm_surgery'
+            AND pid <> pg_backend_pid();
+        """))
+        db.commit()
+        return {"message": "All connections to hctm_surgery have been terminated."}
     except Exception as error:
+        db.rollback()
         return send_error_response(error)
