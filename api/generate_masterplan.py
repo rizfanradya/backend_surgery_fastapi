@@ -757,6 +757,7 @@ def generate_masterplan(
                     mssp_id=new_masterplan.id,  # type: ignore
                     mrn=str(row[2]),
                     week_id=matching_week.id,
+                    week_number=week_id,
                     ot_id=ot_id,  # type: ignore
                     unit_id=unit_data.id,  # type: ignore
                     day_id=day_id,
@@ -816,7 +817,7 @@ def otassignment(
                 OtAssignment.unit_id == unit_id)
         if week_id and type == 'weekly':
             ot_assignment = ot_assignment.where(
-                OtAssignment.week_id == week_id)
+                OtAssignment.week_number == week_id)
 
         ot_assignment = ot_assignment.all()
         ot_assignments_map = {}
@@ -824,7 +825,7 @@ def otassignment(
             ot.id for ot in session.query(Ot).order_by(Ot.id.asc()).all()]
 
         for assignment in ot_assignment:
-            week_id = assignment.week_id
+            week_id = assignment.week_number
             ot_id = assignment.ot_id
             day_name = assignment.day.name.lower()
 
@@ -842,7 +843,7 @@ def otassignment(
 
         week_date_map = {}
         for assignment in session.query(OtAssignment).where(OtAssignment.mssp_id == mssp_id).all():
-            week_id = assignment.week_id
+            week_id = assignment.week_number
             date = assignment.date
             if week_id not in week_date_map:
                 week_date_map[week_id] = {"start_date": date, "end_date": date}
@@ -895,11 +896,20 @@ def otassignment(
                 "data": data
             })
 
+        if not grouped_data:
+            selected_week = next(
+                (fw for fw in formatted_weeks if fw['week_id'] == week_id), {})
+            grouped_data.append({
+                "week": selected_week,
+                "data": []
+            })
+
         return {
             "otassignment": grouped_data,
             "masterPlan": masterplan,
             "weeks": formatted_weeks,
-            "days": session.query(Day).order_by(Day.id.asc()).all()
+            "days": session.query(Day).order_by(Day.id.asc()).all(),
+            "ots": session.query(Ot).order_by(Ot.id.asc()).all(),
         }
     except Exception as error:
         send_error_response(error, 'Cannot get ot assignment data')

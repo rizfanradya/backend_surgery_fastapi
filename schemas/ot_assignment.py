@@ -7,6 +7,7 @@ class OtAssignmentSchema(BaseModel):
     mssp_id: int
     mrn: str
     week_id: int
+    week_number: int
     ot_id: int
     unit_id: int
     day_id: int

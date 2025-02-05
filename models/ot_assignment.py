@@ -14,6 +14,7 @@ class OtAssignment(Base):
     opening_time = Column(Time, nullable=False)
     closing_time = Column(Time, nullable=False)
     date = Column(Date, nullable=False)
+    week_number = Column(Integer, nullable=False)
     mssp_id = Column(Integer, ForeignKey('masterplan.id'), nullable=False)
     masterplan = relationship('Masterplan', back_populates='ot_assignment')
     ot_id = Column(Integer, ForeignKey('ot.id'), nullable=False)
