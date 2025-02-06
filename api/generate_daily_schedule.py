@@ -511,6 +511,13 @@ def generate_daily_schedule(
 
 @router.get('/run_id')
 def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    status_completed = session.query(Status).where(
+        Status.description.ilike('completed')
+    ).first()
+    if status_completed is None:
+        send_error_response(
+            'Status "Completed" not found in database.'
+        )
     try:
         subquery = (
             session.query(
@@ -531,7 +538,8 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
         data = [{"run_id": row.run_id} for row in data_query.all()]
         return {
             "total": total_query,
-            "data": data
+            "data": data,
+            "schedule_queue": session.query(ScheduleQueue).where(ScheduleQueue.status_id != status_completed.id).all()
         }
     except Exception as error:
         send_error_response(str(error), 'Failed get run ids')
