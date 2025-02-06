@@ -113,7 +113,10 @@ def schedule_results_and_filter(
                     ScheduleResults.week_id == week_id, ScheduleResults.month_id == month_id)
             else:
                 current_week_id = (
-                    current_today - datetime(current_today.year, current_today.month, 1)).days // 7 + 1
+                    current_today - datetime(
+                        current_today.year, current_today.month, 1
+                    ).replace(tzinfo=indonesia_tz)
+                ).days // 7 + 1
                 # if current_today.weekday() in [5, 6]:
                 #     current_week_id += 1
                 schedule_results = schedule_results.where(
