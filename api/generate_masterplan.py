@@ -78,10 +78,8 @@ def masterplan(
         sort_column = column_map[sort_by]
         sort_order = asc if order == 'asc' else desc
         query = query.order_by(sort_order(sort_column))  # type: ignore
-    total = query.count()
-    query = query.offset(offset).limit(limit).all()  # type: ignore
     return {
-        "total": total,
+        "total": query.count(),
         "schedule_resource": session.query(ScheduleResource).order_by(ScheduleResource.id.asc()).all(),
         "data": [
             {
@@ -94,7 +92,7 @@ def masterplan(
                     "id": masterplan.status_id,
                     "description": masterplan.status.description
                 } if masterplan.status else None
-            } for masterplan in query
+            } for masterplan in query.offset(offset).limit(limit).all()
         ]
     }
 
@@ -398,7 +396,6 @@ def set_constraints(ins_constraints: InsertConstraintsSchema, session: Session =
                                 session.add(reverse_clashing_sub_specialty)
                                 ssp_ids.add(reverse_unit.id)
             session.commit()
-
     return {'message': 'Constraints updated successfully.'}
 
 
@@ -965,7 +962,6 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
         # if subspeciality_desc not in unit_names:
         #     send_error_response(
         #         f'{subspeciality_desc} in column SUBSPECIALITY DESC and in row {row_idx} not found in database.')
-
     file.file.seek(0)
     return {'message': 'Excel file is valid with correct headers and data matching the database.'}
 
