@@ -1,7 +1,7 @@
 from collections import defaultdict
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
@@ -528,18 +528,35 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
             .order_by(func.min(ScheduleResults.id))
             .subquery()
         )
-        total_query = session.query(func.count(subquery.c.run_id)).scalar()
-        data_query = (
-            session.query(subquery.c.run_id)
-            .order_by(subquery.c.min_id)  # type: ignore
-            .limit(limit)
-            .offset(offset)
-        )
-        data = [{"run_id": row.run_id} for row in data_query.all()]
+
         return {
-            "total": total_query,
-            "data": data,
-            "schedule_queue": session.query(ScheduleQueue).where(ScheduleQueue.status_id != status_completed.id).all()
+            "total": session.query(func.count(subquery.c.run_id)).scalar(),
+            "data": [
+                {"run_id": row.run_id} for row in (
+                    session.query(subquery.c.run_id)
+                    .order_by(subquery.c.min_id)  # type: ignore
+                    .limit(limit)
+                    .offset(offset)
+                ).all()
+            ],
+            "schedule_queue": [
+                {
+                    "id": sq.id,
+                    "run_id": sq.run_id,
+                    "uploaded_file": sq.uploaded_file,
+                    "created_at": sq.created_at.isoformat(),
+                    "status": {
+                        "id": sq.status.id,
+                        "description": sq.status.description
+                    } if sq.status else None
+                }
+                for sq in (
+                    session.query(ScheduleQueue)
+                    .options(joinedload(ScheduleQueue.status))
+                    .filter(ScheduleQueue.status_id != status_completed.id)
+                    .all()
+                )
+            ]
         }
     except Exception as error:
         send_error_response(str(error), 'Failed get run ids')
