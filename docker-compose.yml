@@ -50,7 +50,7 @@ services:
     depends_on:
       - backend
       - redis
-    command: celery -A celery_config worker --loglevel=info
+    command: celery -A utils.celery worker --loglevel=info
 
   celery_beat:
     build:
@@ -60,7 +60,7 @@ services:
     depends_on:
       - backend
       - redis
-    command: celery -A celery_config beat --loglevel=info
+    command: celery -A utils.celery beat --loglevel=info
 
   frontend:
     build:
