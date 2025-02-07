@@ -358,10 +358,6 @@ def generate_daily_schedule(
 
     available_ots = session.scalars(
         session.query(Ot.id).order_by(Ot.id.asc())).all()
-    ot_unit_map = {
-        assignment.ot_id: assignment.unit_id
-        for assignment in session.query(OtAssignment).where(OtAssignment.mssp_id == master_plan.id).all()
-    }
 
     operation_dates = []
     current_date = start_date_dt
@@ -376,14 +372,18 @@ def generate_daily_schedule(
     date_index = 0
     ot_load_balance = {ot_id: 0 for ot_id in available_ots}
 
+    ot_unit_map = defaultdict(set)
+    ot_assignments = session.query(OtAssignment).where(
+        OtAssignment.mssp_id == master_plan.id).all()
+    for assignment in ot_assignments:
+        ot_unit_map[assignment.unit_id].add(assignment.ot_id)
+    ot_unit_map = {unit: list(ots) for unit, ots in ot_unit_map.items()}
+
     for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
             min_row=2, values_only=True)], start=2):
         unit_data = session.query(Unit).where(
             cast(Unit.name, String).ilike(f"%{row[8]}%")).first()
         if unit_data is None:
-            continue
-
-        if unit_data.id not in ot_unit_map.values():
             continue
 
         duration_str = str(row[11])
@@ -404,14 +404,10 @@ def generate_daily_schedule(
         procedure_name = f"PROCEDURE - {procedure_name}"
 
         sorted_ots = sorted(
-            [
-                ot_id for ot_id, unit_id
-                in ot_unit_map.items()
-                if unit_id == unit_data.id
-            ],
-            key=lambda
-            ot: ot_load_balance[ot]
+            ot_unit_map.get(unit_data.id, []),
+            key=lambda ot: ot_load_balance.get(ot, 0)
         )
+
         for ot_ids in sorted_ots:
             operation_date = operation_dates[date_index % len(
                 operation_dates)]
@@ -502,7 +498,7 @@ def generate_daily_schedule(
         session.add_all(schedule_results)
         new_schedule_queue.status_id = status_completed.id
         session.commit()
-        return {"run_id": run_id, "message": "Schedule generated successfully"}
+        return {"run_id": run_id, "message": "Schedule generated successfully", "ot_unit_map": ot_unit_map}
     except Exception as error:
         new_schedule_queue.status_id = status_failed.id
         session.commit()

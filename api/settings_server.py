@@ -61,10 +61,11 @@ def backup_database(token: str = Depends(TokenAuthorization)):
 def truncate_master_tables(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     try:
         truncate_tables = [
-            'masterplan',
-            'ot_assignment',
             'surgery',
+            'ot_assignment',
+            'masterplan',
             'schedule_results',
+            'schedule_queue',
         ]
         for table in truncate_tables:
             session.execute(text(f'ALTER TABLE {table} DISABLE TRIGGER ALL'))
