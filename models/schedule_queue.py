@@ -1,6 +1,6 @@
 from utils.database import Base
 from sqlalchemy.schema import Column
-from sqlalchemy.types import String, Integer, DateTime
+from sqlalchemy.types import String, Integer, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
 import pytz
@@ -17,6 +17,7 @@ class ScheduleQueue(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(WIB), nullable=False)
     uploaded_file = Column(String(length=255))
+    log_info = Column(Text)
     status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
     status = relationship('Status', back_populates='schedule_queue')
     schedule_results = relationship(

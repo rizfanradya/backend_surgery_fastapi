@@ -521,6 +521,8 @@ def generate_masterplan(
         with open(file_path, 'wb') as f:
             f.write(contents)
     except Exception as error:
+        new_masterplan.log_info = str(error)
+        session.commit()
         send_error_response(str(error), 'Failed to save file')
 
     new_masterplan.status_id = status_process.id
@@ -553,6 +555,8 @@ def generate_masterplan(
         if week:
             available_week_ids.append(week.id)
     if not available_week_ids:
+        new_masterplan.log_info = 'No available weeks found for the specified dates.'
+        session.commit()
         send_error_response(
             "No available weeks found for the specified dates.")
     available_week_ids = session.scalars(
@@ -796,6 +800,7 @@ def generate_masterplan(
         return new_masterplan
     except Exception as error:
         new_masterplan.status_id = status_failed.id
+        new_masterplan.log_info = str(error)
         session.delete(new_masterplan)
         session.commit()
         send_error_response(str(error), 'Cannot create master plan')

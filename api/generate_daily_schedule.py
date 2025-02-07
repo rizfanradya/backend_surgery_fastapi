@@ -348,6 +348,8 @@ def generate_daily_schedule(
         with open(file_path, 'wb') as f:
             f.write(contents)
     except Exception as error:
+        new_schedule_queue.log_info = str(error)
+        session.commit()
         send_error_response(str(error), 'Failed to save file')
 
     new_schedule_queue.status_id = status_process.id
@@ -388,11 +390,15 @@ def generate_daily_schedule(
 
         duration_str = str(row[11])
         if not duration_str.isdigit() or len(duration_str) != 4:
+            new_schedule_queue.log_info = f"Invalid duration format at row {row_idx}"
+            session.commit()
             send_error_response(
                 f"Invalid duration format at row {row_idx}")
         duration_hours = int(duration_str[:2])
         duration_minutes = int(duration_str[2:])
         if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
+            new_schedule_queue.log_info = 'Duration out of valid range'
+            session.commit()
             send_error_response("Duration out of valid range")
         duration = duration_hours * 60 + duration_minutes
         if duration > work_day_minutes:
@@ -416,6 +422,8 @@ def generate_daily_schedule(
                 Day.name == operation_date.strftime('%A')
             ).scalar()
             if not day_id:
+                new_schedule_queue.log_info = f"Day not found for date {operation_date}"
+                session.commit()
                 send_error_response(f"Day not found for date {operation_date}")
 
             matching_week = session.query(Week).where(
@@ -428,6 +436,8 @@ def generate_daily_schedule(
             matching_month = session.query(Month).where(
                 cast(Month.name, String).ilike(f"%{monday_of_week.strftime('%B')}%")).first()
             if not matching_month:
+                new_schedule_queue.log_info = f"Month not found for date {operation_date}"
+                session.commit()
                 send_error_response(
                     f"Month not found for date {operation_date}")
 
@@ -501,6 +511,7 @@ def generate_daily_schedule(
         return {"run_id": run_id, "message": "Schedule generated successfully", "ot_unit_map": ot_unit_map}
     except Exception as error:
         new_schedule_queue.status_id = status_failed.id
+        new_schedule_queue.log_info = str(error)
         session.commit()
         send_error_response(str(error), 'Cannot create daily schedule')
 
