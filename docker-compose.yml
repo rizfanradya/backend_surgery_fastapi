@@ -22,7 +22,7 @@ services:
     image: redis:latest
     restart: always
     ports:
-      - "63791:63791"
+      - "63791:6379"
     command: redis-server --save 60 1 --loglevel warning
     volumes:
       - redis_data:/data
