@@ -7,7 +7,7 @@ from utils.calculate_week_name import calculate_week_name
 from utils.retrieve.status import retrieve_status
 from utils.retrieve.objectives import retrieve_objectives
 from utils.retrieve.fixed_ot_type import retrieve_fixed_ot_type
-from utils.send_email_message import send_email, generate_failed_email, generate_success_email
+from utils.send_email_message import send_email, generate_masterplan_failed, generate_masterplan_success
 from models.masterplan import Masterplan
 from models.procedure_name import ProcedureName
 from models.clashing_subspecialties import ClashingSubSpecialties
@@ -73,7 +73,7 @@ def generate_masterplan_task(self, masterplan_id: int):
             send_email(
                 masterplan.user.email,
                 'Generate Masterplan Failed',
-                generate_failed_email(masterplan, message)
+                generate_masterplan_failed(masterplan, message)
             )
             return {"status": "error", "message": message}
         with open(file_path, "rb") as file:
@@ -100,7 +100,7 @@ def generate_masterplan_task(self, masterplan_id: int):
                 send_email(
                     masterplan.user.email,
                     'Generate Masterplan Failed',
-                    generate_failed_email(masterplan, message)
+                    generate_masterplan_failed(masterplan, message)
                 )
                 session.commit()
                 return {"status": "error", "message": message}
@@ -122,7 +122,7 @@ def generate_masterplan_task(self, masterplan_id: int):
                 send_email(
                     masterplan.user.email,
                     'Generate Masterplan Failed',
-                    generate_failed_email(masterplan, message)
+                    generate_masterplan_failed(masterplan, message)
                 )
                 session.commit()
                 return {"status": "error", "message": message}
@@ -133,7 +133,7 @@ def generate_masterplan_task(self, masterplan_id: int):
                 send_email(
                     masterplan.user.email,
                     'Generate Masterplan Failed',
-                    generate_failed_email(masterplan, message)
+                    generate_masterplan_failed(masterplan, message)
                 )
                 session.commit()
                 return {"status": "error", "message": message}
@@ -177,7 +177,7 @@ def generate_masterplan_task(self, masterplan_id: int):
             send_email(
                 masterplan.user.email,
                 'Generate Masterplan Failed',
-                generate_failed_email(masterplan, message)
+                generate_masterplan_failed(masterplan, message)
             )
             session.commit()
             return {"status": "error", "message": message}
@@ -423,7 +423,7 @@ def generate_masterplan_task(self, masterplan_id: int):
         send_email(
             masterplan.user.email,
             f' - {message}',
-            generate_success_email(masterplan)
+            generate_masterplan_success(masterplan)
         )
         return {"status": "success", "message": message}
     except Exception as e:
@@ -434,7 +434,7 @@ def generate_masterplan_task(self, masterplan_id: int):
         send_email(
             masterplan.user.email,
             'Generate Masterplan Failed',
-            generate_failed_email(masterplan, '-')
+            generate_masterplan_failed(masterplan, '-')
         )
         session.commit()
         return {"status": "error", "message": str(e)}

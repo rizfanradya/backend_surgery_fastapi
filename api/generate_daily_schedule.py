@@ -6,32 +6,25 @@ from utils.database import get_db
 from utils.auth import TokenAuthorization
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
-from utils.add_duration import add_duration
-from utils.calculate_week_name import calculate_week_name
-from datetime import date, datetime, time, timedelta
+from utils.retrieve.status import retrieve_status
+from utils.tasks.generate_daily_schedule import generate_schedule_task
+from datetime import date, datetime, timedelta
 from calendar import monthrange
 from openpyxl import load_workbook, Workbook
 from pandas import DataFrame
 from io import BytesIO
-import json
 import pytz
 import os
 from sqlalchemy import func, cast, String, extract
 from typing import Optional, Literal
-from schemas.schedule_results import ScheduleResultsSchema
-from schemas.generate_daily_schedule import ScheduleResourceSchema
 from schemas.schedule_queue import ScheduleQueueSchema
 from models.masterplan import Masterplan
 from models.schedule_results import ScheduleResults
 from models.ot import Ot
 from models.unit import Unit
 from models.procedure_name import ProcedureName
-from models.schedule_resource import ScheduleResource
-from models.week import Week
 from models.day import Day
 from models.status import Status
-from models.month import Month
-from models.ot_assignment import OtAssignment
 from models.schedule_queue import ScheduleQueue
 
 router = APIRouter()
@@ -245,19 +238,8 @@ def generate_daily_schedule(
     session: Session = Depends(get_db),
     token: str = Depends(TokenAuthorization)
 ):
-    try:
-        resources = [
-            ScheduleResourceSchema(**item) for item in json.loads(resource)]
-        resource_map = {r.id: r for r in session.query(ScheduleResource).where(
-            ScheduleResource.id.in_([item.id for item in resources])).all()}
-        for item in resources:
-            if item.id in resource_map:
-                for key, value in item.dict().items():
-                    if value is not None:
-                        setattr(resource_map[item.id], key, value)
-        session.commit()
-    except Exception:
-        pass
+    if file.content_type not in ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]:
+        send_error_response('Wrong file type, only accept xlsx')
 
     start_date_dt = parse_date(start_date)
     end_date_dt = parse_date(end_date)
@@ -269,68 +251,23 @@ def generate_daily_schedule(
     if start_date_dt > end_date_dt:
         send_error_response('Start date cannot be after end date')
 
-    status_pending = session.query(Status).where(
-        Status.description.ilike('pending')
-    ).first()
-    if status_pending is None:
-        send_error_response(
-            'Status "Pending" not found in database.'
-        )
-
-    status_process = session.query(Status).where(
-        Status.description.ilike('process')
-    ).first()
-    if status_process is None:
-        send_error_response(
-            'Status "Process" not found in database.'
-        )
-
-    status_completed = session.query(Status).where(
-        Status.description.ilike('completed')
-    ).first()
-    if status_completed is None:
-        send_error_response(
-            'Status "Completed" not found in database.'
-        )
-
-    status_failed = session.query(Status).where(
-        Status.description.ilike('failed')
-    ).first()
-    if status_failed is None:
-        send_error_response(
-            'Status "Failed" not found in database.'
-        )
-
     master_plan = session.query(Masterplan).where(
         Masterplan.id == master_plan_id).first()
     if master_plan is None:
         send_error_response('Master plan not found')
 
-    check_excell_format(file, session, token)
+    status_pending = retrieve_status('pending', session)
+
     run_id = f"RUN-{int(datetime.now(indonesia_tz).timestamp())}"
-
-    try:
-        run_ids = session.query(ScheduleResults.run_id).where(
-            ScheduleResults.surgery_date.in_([start_date, end_date])
-        ).distinct().all()
-        run_id_list = [run_id[0] for run_id in run_ids]
-        if run_id_list:
-            schedule_queue_ids = session.query(ScheduleResults.schedule_queue_id).where(
-                ScheduleResults.run_id.in_(run_id_list)
-            ).distinct().all()
-            schedule_queue_id_list = [sq[0] for sq in schedule_queue_ids]
-            session.query(ScheduleResults).where(ScheduleResults.run_id.in_(
-                run_id_list)).delete(synchronize_session=False)
-            if schedule_queue_id_list:
-                session.query(ScheduleQueue).where(ScheduleQueue.id.in_(
-                    schedule_queue_id_list)).delete(synchronize_session=False)
-            session.commit()
-    except Exception as error:
-        send_error_response(error, 'Failed to remove old schedule result')
-
-    new_schedule_queue_schema = ScheduleQueueSchema(run_id=run_id)
+    new_schedule_queue_schema = ScheduleQueueSchema(
+        run_id=run_id,
+        start_date=start_date,
+        end_date=end_date,
+        masterplan_id=master_plan.id
+    )
     new_schedule_queue = ScheduleQueue(**new_schedule_queue_schema.dict())
     new_schedule_queue.status_id = status_pending.id
+    new_schedule_queue.user_id = token.id
     session.add(new_schedule_queue)
     session.commit()
 
@@ -352,168 +289,16 @@ def generate_daily_schedule(
         session.commit()
         send_error_response(str(error), 'Failed to save file')
 
-    new_schedule_queue.status_id = status_process.id
+    task = generate_schedule_task.apply_async(
+        args=[new_schedule_queue.id, resource])
+    new_schedule_queue.task_id = task.id
     session.commit()
-    excel_data = BytesIO(contents)
-    workbook = load_workbook(excel_data)
-    sheet = workbook.active
-
-    available_ots = session.scalars(
-        session.query(Ot.id).order_by(Ot.id.asc())).all()
-
-    operation_dates = []
-    current_date = start_date_dt
-    while current_date <= end_date_dt:
-        if current_date.weekday() < 5:
-            operation_dates.append(current_date)
-        current_date += timedelta(days=1)
-
-    ot_time_tracking = {}
-    work_day_minutes = 8 * 60
-    schedule_results = []
-    date_index = 0
-    ot_load_balance = {ot_id: 0 for ot_id in available_ots}
-
-    ot_unit_map = defaultdict(set)
-    ot_assignments = session.query(OtAssignment).where(
-        OtAssignment.mssp_id == master_plan.id).all()
-    for assignment in ot_assignments:
-        ot_unit_map[assignment.unit_id].add(assignment.ot_id)
-    ot_unit_map = {unit: list(ots) for unit, ots in ot_unit_map.items()}
-
-    for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
-            min_row=2, values_only=True)], start=2):
-        unit_data = session.query(Unit).where(
-            cast(Unit.name, String).ilike(f"%{row[8]}%")).first()
-        if unit_data is None:
-            continue
-
-        duration_str = str(row[11])
-        if not duration_str.isdigit() or len(duration_str) != 4:
-            new_schedule_queue.log_info = f"Invalid duration format at row {row_idx}"
-            session.commit()
-            send_error_response(
-                f"Invalid duration format at row {row_idx}")
-        duration_hours = int(duration_str[:2])
-        duration_minutes = int(duration_str[2:])
-        if not (0 <= duration_hours < 24 and 0 <= duration_minutes < 60):
-            new_schedule_queue.log_info = 'Duration out of valid range'
-            session.commit()
-            send_error_response("Duration out of valid range")
-        duration = duration_hours * 60 + duration_minutes
-        if duration > work_day_minutes:
-            continue
-
-        procedure_name = row[10]
-        if isinstance(procedure_name, str) and "-" in procedure_name:
-            procedure_name = procedure_name.split("-", 1)[-1].strip()
-        procedure_name = f"PROCEDURE - {procedure_name}"
-
-        sorted_ots = sorted(
-            ot_unit_map.get(unit_data.id, []),
-            key=lambda ot: ot_load_balance.get(ot, 0)
-        )
-
-        for ot_ids in sorted_ots:
-            operation_date = operation_dates[date_index % len(
-                operation_dates)]
-
-            day_id = session.query(Day.id).where(
-                Day.name == operation_date.strftime('%A')
-            ).scalar()
-            if not day_id:
-                new_schedule_queue.log_info = f"Day not found for date {operation_date}"
-                session.commit()
-                send_error_response(f"Day not found for date {operation_date}")
-
-            matching_week = session.query(Week).where(
-                Week.name == calculate_week_name(operation_date.date())).first()
-            if not matching_week:
-                continue
-
-            monday_of_week = operation_date - \
-                timedelta(days=operation_date.weekday())
-            matching_month = session.query(Month).where(
-                cast(Month.name, String).ilike(f"%{monday_of_week.strftime('%B')}%")).first()
-            if not matching_month:
-                new_schedule_queue.log_info = f"Month not found for date {operation_date}"
-                session.commit()
-                send_error_response(
-                    f"Month not found for date {operation_date}")
-
-            key = (ot_ids, day_id, matching_week.id, operation_date)
-            if key not in ot_time_tracking:
-                ot_time_tracking[key] = datetime.combine(
-                    operation_date,
-                    time(8, 0)
-                )
-
-            ot_start_datetime = ot_time_tracking[key]
-            ot_end_datetime = ot_start_datetime + timedelta(minutes=duration)
-            if ot_end_datetime.time() > time(16, 0):
-                continue
-            remaining_minutes = work_day_minutes - (
-                ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480)
-            if duration > remaining_minutes:
-                continue
-            ot_time_tracking[key] = ot_end_datetime
-
-            ot_load_balance[ot_ids] += 1
-
-            schedule_result = ScheduleResultsSchema(
-                run_id=run_id,
-                schedule_queue_id=new_schedule_queue.id,
-                unit_id=unit_data.id,
-                mrn=str(row[1]),
-                age=row[2],  # type: ignore
-                week_id=matching_week.id,  # type: ignore
-                day_id=day_id,
-                month_id=matching_month.id,  # type: ignore
-                surgery_date=ot_start_datetime.date(),
-                type_of_surgery=str(row[7]),
-                sub_specialty_desc=str(row[8]),
-                specialty_id=str(row[9]),
-                procedure_name=procedure_name,
-                surgery_duration=duration,
-                phu_id=unit_data.id,  # type: ignore
-                phu_start_time=(
-                    ot_start_datetime - timedelta(minutes=60)).time(),
-                phu_end_time=ot_start_datetime.time(),
-                ot_id=ot_ids,
-                ot_start_time=ot_start_datetime.time(),
-                ot_end_time=ot_end_datetime.time(),
-                surgeon_name=str(row[13]),
-                booked_by=str(row[12]),
-                post_op_id=unit_data.id,  # type: ignore
-                post_op_start_time=ot_end_datetime.time(),
-                post_op_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 30, indonesia_tz),
-                pacu_id=unit_data.id,  # type: ignore
-                pacu_start_time=ot_end_datetime.time(),
-                pacu_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
-                icu_id=unit_data.id,  # type: ignore
-                icu_start_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
-                icu_end_time=add_duration(
-                    ot_end_datetime.strftime("%H:%M"), 330, indonesia_tz)
-            )
-            schedule_results.append(
-                ScheduleResults(**schedule_result.dict()))
-            date_index += 1
-            break
-
-    file.file.seek(0)
-    try:
-        session.add_all(schedule_results)
-        new_schedule_queue.status_id = status_completed.id
-        session.commit()
-        return {"run_id": run_id, "message": "Schedule generated successfully", "ot_unit_map": ot_unit_map}
-    except Exception as error:
-        new_schedule_queue.status_id = status_failed.id
-        new_schedule_queue.log_info = str(error)
-        session.commit()
-        send_error_response(str(error), 'Cannot create daily schedule')
+    return {
+        "status": "pending",
+        "message": "Daily Schedule is being processed",
+        "run_id": run_id,
+        "task_id": task.id
+    }
 
 
 @router.get('/run_id')
@@ -610,7 +395,7 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
                 f"Column {idx}: Expected '{expected}', found '{actual}'"
             )
     procedure_names = {p.name for p in session.query(ProcedureName).all()}
-    unit_names = {u.name for u in session.query(Unit).all()}
+    # unit_names = {u.name for u in session.query(Unit).all()}
     for row_idx, row in enumerate(
         sheet.iter_rows(min_row=2, values_only=True),  # type: ignore
         start=2

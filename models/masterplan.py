@@ -29,3 +29,4 @@ class Masterplan(Base):
     status = relationship('Status', back_populates='masterplan')
     ot_assignment = relationship('OtAssignment', back_populates='masterplan')
     surgery = relationship('Surgery', back_populates='masterplan')
+    schedule_queue = relationship('ScheduleQueue', back_populates='masterplan')

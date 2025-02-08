@@ -9,6 +9,7 @@ class MainBaseSchema(BaseModel):
     last_name: str
     is_active: bool
     role_id: int
+    email_notification: bool
 
 
 class UserSchema(MainBaseSchema):

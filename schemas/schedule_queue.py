@@ -1,10 +1,14 @@
 from pydantic import BaseModel
 from typing import List
 from .status import StatusSchema
+from datetime import date
 
 
 class ScheduleQueueSchema(BaseModel):
     run_id: str
+    start_date: date
+    end_date: date
+    masterplan_id: int
 
 
 class BaseSchema(ScheduleQueueSchema):
