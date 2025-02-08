@@ -85,6 +85,7 @@ def masterplan(
                 "description": masterplan.description,
                 "objective_value": masterplan.objective_value,
                 "uploaded_file": masterplan.uploaded_file,
+                "log_usr": masterplan.log_usr,
                 "status": {
                     "id": masterplan.status_id,
                     "description": masterplan.status.description

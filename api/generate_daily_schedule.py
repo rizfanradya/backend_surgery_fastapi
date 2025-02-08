@@ -337,6 +337,7 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
                     "run_id": sq.run_id,
                     "uploaded_file": sq.uploaded_file,
                     "created_at": sq.created_at.isoformat(),
+                    "log_usr": sq.log_usr,
                     "status": {
                         "id": sq.status.id,
                         "description": sq.status.description
