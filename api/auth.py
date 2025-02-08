@@ -2,22 +2,17 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.user import User
-from email.message import EmailMessage
 import jwt
 import bcrypt
 import random
-import smtplib
 from utils.database import get_db
 from utils.auth import create_access_token, create_refresh_token
 from utils.error_response import send_error_response
+from utils.send_email_message import send_email
 from utils.config import (
     JWT_REFRESH_SECRET_KEY,
     ALGORITHM,
     JWT_SECRET_KEY,
-    IP_SERVER_HOSTNAME,
-    SERVER_PORT,
-    EMAIL_PASSWORD,
-    EMAIL_USER,
     LINK_FRONTEND
 )
 
@@ -124,35 +119,31 @@ async def email_otp(id: int, session: Session = Depends(get_db)):
                 algorithm=ALGORITHM
             )
 
-            msg = EmailMessage()
-            msg['subject'] = "HCTM Surgery Verification"
-            msg['from'] = 'HCTM Surgery'
-            msg['to'] = user_info.email
-            msg.set_content('')
-            msg.add_alternative(
-                f"""\
+            message = f"""
                 <!DOCTYPE html>
                 <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>Verifify email</title>
-                        <script src="https://cdn.tailwindcss.com"></script>
-                    </head>
-                    <body>
-                        <div class="flex flex-col items-center justify-center w-full gap-4 my-20 tracking-wide">
-                            <h1 class="text-4xl font-bold">Verify Your Email</h1>
-                            <p class="font-semibold text-md">Click link for verify your email</p>
-                            <a href="{LINK_FRONTEND}/email_verify/{encode_otp}" target="_blank" class="px-8 py-2 font-bold text-white bg-blue-500 rounded-md">Verify Now</a>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Email Verification</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; margin: 0;">
+                    <div style="max-width: 600px; background: white; padding: 20px; border-radius: 5px; 
+                                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); margin: auto;">
+                        <h2 style="color: #333; text-align: center;">Verify Your Email</h2>
+                        <p style="text-align: center; color: #555;">To complete your registration, please verify your email by clicking the button below:</p>
+                        <div style="text-align: center; margin: 20px 0;">
+                            <a href="{LINK_FRONTEND}/email_verify/{encode_otp}" 
+                                style="display: inline-block; background-color: #007bff; color: white; 
+                                        padding: 12px 24px; text-decoration: none; border-radius: 5px; 
+                                        font-size: 16px; font-weight: bold;">
+                                Verify Now
+                            </a>
                         </div>
-                    </body>
+                        <p style="text-align: center; color: #777;">If you did not request this email, please ignore it.</p>
+                    </div>
+                </body>
                 </html>
-            """,
-                subtype='html'
-            )
-
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465)as smtp:
-                smtp.login(EMAIL_USER, EMAIL_PASSWORD)
-                smtp.send_message(msg)
+                """
+            send_email(user_info.email, 'Verification', message)
             return {"detail": "verification sending"}

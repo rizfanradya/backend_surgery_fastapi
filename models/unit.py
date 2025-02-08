@@ -3,7 +3,6 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import String, Integer, Boolean
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
-from .clashing_subspecialties import ClashingSubSpecialties
 
 
 class Unit(Base):

@@ -52,3 +52,6 @@ if __name__ == "__main__":
         reload=True,
         port=int(SERVER_PORT)  # type: ignore
     )
+
+# run the celery command in windows
+# celery -A utils.celery worker --loglevel=info --concurrency=4 --pool=solo

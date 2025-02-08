@@ -23,9 +23,14 @@ services:
     restart: always
     ports:
       - "63791:6379"
-    command: redis-server --save 60 1 --loglevel warning
+    command: redis-server --appendonly yes --save 60 1 --loglevel warning
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -40,7 +45,7 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
   celery_worker:
     build:
@@ -48,9 +53,11 @@ services:
       dockerfile: Dockerfile
     restart: always
     depends_on:
-      - backend
-      - redis
-    command: celery -A utils.celery worker --loglevel=info
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    command: celery -A utils.celery worker --loglevel=info --concurrency=4
 
   celery_beat:
     build:
@@ -58,8 +65,10 @@ services:
       dockerfile: Dockerfile
     restart: always
     depends_on:
-      - backend
-      - redis
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
     command: celery -A utils.celery beat --loglevel=info
 
   frontend:

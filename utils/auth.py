@@ -57,6 +57,7 @@ def TokenAuthorization(token: str = Depends(oauth2_scheme), session: Session = D
             send_error_response("User not found")
         if user_info.is_active == False:
             send_error_response("Your email has not been verified")
+        return user_info
     except jwt.ExpiredSignatureError:
         send_error_response("Token has expired")
     except jwt.InvalidTokenError:

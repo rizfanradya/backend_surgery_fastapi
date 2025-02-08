@@ -17,8 +17,12 @@ class ScheduleQueue(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(WIB), nullable=False)
     uploaded_file = Column(String(length=255))
-    log_info = Column(Text)
+    log_usr = Column(Text)
+    log_sys = Column(Text)
+    task_id = Column(Text)
     status_id = Column(Integer, ForeignKey('status.id'), nullable=False)
     status = relationship('Status', back_populates='schedule_queue')
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user = relationship('User', back_populates='schedule_queue')
     schedule_results = relationship(
         'ScheduleResults', back_populates='schedule_queue')
