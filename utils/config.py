@@ -30,3 +30,25 @@ REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = os.environ.get('REDIS_PORT')
 REDIS_DB = os.environ.get('REDIS_DB')
 REDIS_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+
+
+print(JWT_SECRET_KEY)
+print(JWT_REFRESH_SECRET_KEY)
+
+print(IP_SERVER_HOSTNAME)
+print(SERVER_PORT)
+
+print(EMAIL_USER)
+print(EMAIL_PASSWORD)
+
+print(DB_HOSTNAME)
+print(DB_PORT)
+print(DB_USER)
+print(DB_PASSWORD)
+print(DB_NAME)
+
+print(LINK_FRONTEND)
+
+print(REDIS_HOST)
+print(REDIS_PORT)
+print(REDIS_DB)
