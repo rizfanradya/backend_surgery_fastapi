@@ -12,6 +12,11 @@ class MainBaseSchema(BaseModel):
     email_notification: bool
 
 
+class UserEmailNotification(BaseModel):
+    id: int
+    email_notification: bool
+
+
 class UserSchema(MainBaseSchema):
     password: str
 

@@ -41,6 +41,7 @@ def generate_masterplan_task(self, masterplan_id: int):
 
     status_failed = retrieve_status('failed', session)
     try:
+        email_notif = masterplan.user.email_notification
         objectives = retrieve_objectives('clashing', session)
         fixed_ot_type = retrieve_fixed_ot_type('fixed', session)
         status_available = retrieve_status('available', session)
@@ -70,11 +71,12 @@ def generate_masterplan_task(self, masterplan_id: int):
             masterplan.status_id = status_failed.id
             masterplan.log_usr = message
             session.commit()
-            send_email(
-                masterplan.user.email,
-                'Generate Masterplan Failed',
-                generate_masterplan_failed(masterplan, message)
-            )
+            if email_notif:
+                send_email(
+                    masterplan.user.email,
+                    'Generate Masterplan Failed',
+                    generate_masterplan_failed(masterplan, message)
+                )
             return {"status": "error", "message": message}
         with open(file_path, "rb") as file:
             excel_data = BytesIO(file.read())
@@ -97,11 +99,12 @@ def generate_masterplan_task(self, masterplan_id: int):
                 message = f"Column {idx}: Expected '{expected}', found '{actual}'"
                 masterplan.status_id = status_failed.id
                 masterplan.log_usr = message
-                send_email(
-                    masterplan.user.email,
-                    'Generate Masterplan Failed',
-                    generate_masterplan_failed(masterplan, message)
-                )
+                if email_notif:
+                    send_email(
+                        masterplan.user.email,
+                        'Generate Masterplan Failed',
+                        generate_masterplan_failed(masterplan, message)
+                    )
                 session.commit()
                 return {"status": "error", "message": message}
 
@@ -119,22 +122,24 @@ def generate_masterplan_task(self, masterplan_id: int):
                 message = f'{procedure_name} in column PROCEDURE NAME and in row {row_idx} not found in database.'
                 masterplan.status_id = status_failed.id
                 masterplan.log_usr = message
-                send_email(
-                    masterplan.user.email,
-                    'Generate Masterplan Failed',
-                    generate_masterplan_failed(masterplan, message)
-                )
+                if email_notif:
+                    send_email(
+                        masterplan.user.email,
+                        'Generate Masterplan Failed',
+                        generate_masterplan_failed(masterplan, message)
+                    )
                 session.commit()
                 return {"status": "error", "message": message}
             if ot_list_name not in ot_names:
                 message = f'{ot_list_name} in column OT LIST NAME and in row {row_idx} not found in database.'
                 masterplan.status_id = status_failed.id
                 masterplan.log_usr = message
-                send_email(
-                    masterplan.user.email,
-                    'Generate Masterplan Failed',
-                    generate_masterplan_failed(masterplan, message)
-                )
+                if email_notif:
+                    send_email(
+                        masterplan.user.email,
+                        'Generate Masterplan Failed',
+                        generate_masterplan_failed(masterplan, message)
+                    )
                 session.commit()
                 return {"status": "error", "message": message}
 
@@ -174,11 +179,12 @@ def generate_masterplan_task(self, masterplan_id: int):
             message = 'No available weeks found for the specified dates.'
             masterplan.status_id = status_failed.id
             masterplan.log_usr = message
-            send_email(
-                masterplan.user.email,
-                'Generate Masterplan Failed',
-                generate_masterplan_failed(masterplan, message)
-            )
+            if email_notif:
+                send_email(
+                    masterplan.user.email,
+                    'Generate Masterplan Failed',
+                    generate_masterplan_failed(masterplan, message)
+                )
             session.commit()
             return {"status": "error", "message": message}
         available_week_ids = session.scalars(
@@ -420,21 +426,23 @@ def generate_masterplan_task(self, masterplan_id: int):
         masterplan.status_id = status_completed.id
         masterplan.log_usr = message
         session.commit()
-        send_email(
-            masterplan.user.email,
-            f' - {message}',
-            generate_masterplan_success(masterplan)
-        )
+        if email_notif:
+            send_email(
+                masterplan.user.email,
+                f' - {message}',
+                generate_masterplan_success(masterplan)
+            )
         return {"status": "success", "message": message}
     except Exception as e:
         masterplan.id
         masterplan.status_id = status_failed.id
         masterplan.log_sys = str(e)
         masterplan.log_usr = 'Masterplan generated failed'
-        send_email(
-            masterplan.user.email,
-            'Generate Masterplan Failed',
-            generate_masterplan_failed(masterplan, '-')
-        )
+        if email_notif:
+            send_email(
+                masterplan.user.email,
+                'Generate Masterplan Failed',
+                generate_masterplan_failed(masterplan, '-')
+            )
         session.commit()
         return {"status": "error", "message": str(e)}

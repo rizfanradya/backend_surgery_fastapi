@@ -40,6 +40,7 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
 
     status_failed = retrieve_status('failed', session)
     try:
+        email_notif = schedule_queue.user.email_notification
         status_process = retrieve_status('process', session)
         status_completed = retrieve_status('completed', session)
 
@@ -82,11 +83,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
             schedule_queue.status_id = status_failed.id
             schedule_queue.log_usr = message
             session.commit()
-            send_email(
-                schedule_queue.user.email,
-                'Generate Daily Schedule Failed',
-                generate_schedule_failed(schedule_queue, message)
-            )
+            if email_notif:
+                send_email(
+                    schedule_queue.user.email,
+                    'Generate Daily Schedule Failed',
+                    generate_schedule_failed(schedule_queue, message)
+                )
             return {"status": "error", "message": message}
         with open(file_path, "rb") as file:
             excel_data = BytesIO(file.read())
@@ -105,11 +107,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                 schedule_queue.status_id = status_failed.id
                 schedule_queue.log_usr = message
                 session.commit()
-                send_email(
-                    schedule_queue.user.email,
-                    'Generate Daily Schedule Failed',
-                    generate_schedule_failed(schedule_queue, message)
-                )
+                if email_notif:
+                    send_email(
+                        schedule_queue.user.email,
+                        'Generate Daily Schedule Failed',
+                        generate_schedule_failed(schedule_queue, message)
+                    )
                 return {"status": "error", "message": message}
         procedure_names = {p.name for p in session.query(ProcedureName).all()}
         for row_idx, row in enumerate(
@@ -125,11 +128,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                 schedule_queue.status_id = status_failed.id
                 schedule_queue.log_usr = message
                 session.commit()
-                send_email(
-                    schedule_queue.user.email,
-                    'Generate Daily Schedule Failed',
-                    generate_schedule_failed(schedule_queue, message)
-                )
+                if email_notif:
+                    send_email(
+                        schedule_queue.user.email,
+                        'Generate Daily Schedule Failed',
+                        generate_schedule_failed(schedule_queue, message)
+                    )
                 return {"status": "error", "message": message}
 
         available_ots = session.scalars(
@@ -170,11 +174,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                 schedule_queue.status_id = status_failed.id
                 schedule_queue.log_usr = message
                 session.commit()
-                send_email(
-                    schedule_queue.user.email,
-                    'Generate Daily Schedule Failed',
-                    generate_schedule_failed(schedule_queue, message)
-                )
+                if email_notif:
+                    send_email(
+                        schedule_queue.user.email,
+                        'Generate Daily Schedule Failed',
+                        generate_schedule_failed(schedule_queue, message)
+                    )
                 return {"status": "error", "message": message}
             duration_hours = int(duration_str[:2])
             duration_minutes = int(duration_str[2:])
@@ -183,11 +188,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                 schedule_queue.status_id = status_failed.id
                 schedule_queue.log_usr = message
                 session.commit()
-                send_email(
-                    schedule_queue.user.email,
-                    'Generate Daily Schedule Failed',
-                    generate_schedule_failed(schedule_queue, message)
-                )
+                if email_notif:
+                    send_email(
+                        schedule_queue.user.email,
+                        'Generate Daily Schedule Failed',
+                        generate_schedule_failed(schedule_queue, message)
+                    )
                 return {"status": "error", "message": message}
             duration = duration_hours * 60 + duration_minutes
             if duration > work_day_minutes:
@@ -215,11 +221,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                     schedule_queue.status_id = status_failed.id
                     schedule_queue.log_usr = message
                     session.commit()
-                    send_email(
-                        schedule_queue.user.email,
-                        'Generate Daily Schedule Failed',
-                        generate_schedule_failed(schedule_queue, message)
-                    )
+                    if email_notif:
+                        send_email(
+                            schedule_queue.user.email,
+                            'Generate Daily Schedule Failed',
+                            generate_schedule_failed(schedule_queue, message)
+                        )
                     return {"status": "error", "message": message}
 
                 matching_week = session.query(Week).where(
@@ -236,11 +243,12 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                     schedule_queue.status_id = status_failed.id
                     schedule_queue.log_usr = message
                     session.commit()
-                    send_email(
-                        schedule_queue.user.email,
-                        'Generate Daily Schedule Failed',
-                        generate_schedule_failed(schedule_queue, message)
-                    )
+                    if email_notif:
+                        send_email(
+                            schedule_queue.user.email,
+                            'Generate Daily Schedule Failed',
+                            generate_schedule_failed(schedule_queue, message)
+                        )
                     return {"status": "error", "message": message}
 
                 key = (ot_ids, day_id, matching_week.id, operation_date)
@@ -312,21 +320,23 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
         schedule_queue.status_id = status_completed.id
         schedule_queue.log_usr = message
         session.commit()
-        send_email(
-            schedule_queue.user.email,
-            f' - {message}',
-            generate_schedule_success(schedule_queue)
-        )
+        if email_notif:
+            send_email(
+                schedule_queue.user.email,
+                f' - {message}',
+                generate_schedule_success(schedule_queue)
+            )
         return {"status": "success", "message": message}
     except Exception as e:
         schedule_queue.id
         schedule_queue.status_id = status_failed.id
         schedule_queue.log_sys = str(e)
         schedule_queue.log_usr = 'Generate Daily Schedule Failed'
-        send_email(
-            schedule_queue.user.email,
-            'Generate Daily Schedule Failed',
-            generate_schedule_failed(schedule_queue, '-')
-        )
+        if email_notif:
+            send_email(
+                schedule_queue.user.email,
+                'Generate Daily Schedule Failed',
+                generate_schedule_failed(schedule_queue, '-')
+            )
         session.commit()
         return {"status": "error", "message": str(e)}
