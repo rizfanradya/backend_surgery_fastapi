@@ -74,7 +74,7 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                     schedule_queue_id_list)).delete(synchronize_session=False)
 
         abs_path = os.path.abspath(__file__)
-        base_dir = os.path.dirname(abs_path)
+        base_dir = os.path.dirname(os.path.dirname(abs_path))
         upload_dir = os.path.abspath(os.path.join(
             base_dir, '..', 'uploads', 'daily_schedule'))
         os.makedirs(upload_dir, exist_ok=True)
