@@ -8,6 +8,7 @@ from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.retrieve.status import retrieve_status
 from utils.tasks.generate_daily_schedule import generate_schedule_task
+from utils.remove_orphaned_files import check_and_remove_orphaned_files
 from datetime import date, datetime, timedelta
 from calendar import monthrange
 from openpyxl import load_workbook, Workbook
@@ -24,7 +25,6 @@ from models.ot import Ot
 from models.unit import Unit
 from models.procedure_name import ProcedureName
 from models.day import Day
-from models.status import Status
 from models.schedule_queue import ScheduleQueue
 
 router = APIRouter()
@@ -303,14 +303,8 @@ def generate_daily_schedule(
 
 @router.get('/run_id')
 def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    status_completed = session.query(Status).where(
-        Status.description.ilike('completed')
-    ).first()
-    if status_completed is None:
-        send_error_response(
-            'Status "Completed" not found in database.'
-        )
     try:
+        status_completed = retrieve_status('completed', session)
         subquery = (
             session.query(
                 ScheduleResults.run_id,
@@ -439,3 +433,26 @@ def download_template(token: str = Depends(TokenAuthorization)):
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+@router.delete('/purge_failed_queues')
+def purge_failed_queues(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    try:
+        status_failed = retrieve_status('failed', session)
+        session.query(ScheduleResults).where(
+            ScheduleResults.schedule_queue_id.in_(
+                session.query(ScheduleQueue.id).where(
+                    ScheduleQueue.status_id == status_failed.id
+                )
+            )
+        ).delete(synchronize_session=False)
+        deleted_rows = session.query(ScheduleQueue).where(
+            ScheduleQueue.status_id == status_failed.id
+        ).delete(synchronize_session=False)
+        session.commit()
+        check_and_remove_orphaned_files()
+        if deleted_rows == 0:
+            return {"status": "info", "message": "No failed queues found"}
+        return {"status": "success", "message": f"Deleted {deleted_rows} failed queues"}
+    except Exception as error:
+        send_error_response(str(error), "Failed to purge queues")

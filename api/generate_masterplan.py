@@ -8,6 +8,7 @@ from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.tasks.generate_masterplan import generate_masterplan_task
 from utils.retrieve.status import retrieve_status
+from utils.remove_orphaned_files import check_and_remove_orphaned_files
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, text, cast, String
 from io import BytesIO
@@ -45,6 +46,7 @@ from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
 from models.clashing_subspecialties import ClashingSubSpecialties
 from models.schedule_resource import ScheduleResource
+from models.surgery import Surgery
 
 router = APIRouter()
 wib_timezone = pytz.timezone("Asia/Jakarta")
@@ -667,3 +669,24 @@ def download_template(token: str = Depends(TokenAuthorization)):
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+@router.delete('/purge_failed_queues')
+def purge_failed_queues(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
+    try:
+        status_failed = retrieve_status('failed', session)
+        query_mssp = session.query(Masterplan.id).where(
+            Masterplan.status_id == status_failed.id)
+        session.query(OtAssignment).where(OtAssignment.mssp_id.in_(
+            query_mssp)).delete(synchronize_session=False)
+        session.query(Surgery).where(Surgery.mssp_id.in_(
+            query_mssp)).delete(synchronize_session=False)
+        deleted_rows = session.query(Masterplan).where(
+            Masterplan.status_id == status_failed.id).delete(synchronize_session=False)
+        session.commit()
+        check_and_remove_orphaned_files()
+        if deleted_rows == 0:
+            return {"status": "info", "message": "No failed queues found"}
+        return {"status": "success", "message": f"Deleted {deleted_rows} failed queues and related data"}
+    except Exception as error:
+        return send_error_response(str(error), "Failed to purge queues")
