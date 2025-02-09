@@ -67,7 +67,7 @@ def generate_masterplan_task(self, masterplan_id: int):
         os.makedirs(upload_dir, exist_ok=True)
         file_path = os.path.join(upload_dir, masterplan.uploaded_file)
         if not os.path.exists(file_path):
-            message = f"File {masterplan.uploaded_file} not found"
+            message = f"File {masterplan.uploaded_file} not found, file path {file_path}"
             masterplan.status_id = status_failed.id
             masterplan.log_usr = message
             session.commit()

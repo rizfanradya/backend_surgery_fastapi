@@ -79,7 +79,7 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
         os.makedirs(upload_dir, exist_ok=True)
         file_path = os.path.join(upload_dir, schedule_queue.uploaded_file)
         if not os.path.exists(file_path):
-            message = f"File {schedule_queue.uploaded_file} not found"
+            message = f"File {schedule_queue.uploaded_file} not found, file path {file_path}"
             schedule_queue.status_id = status_failed.id
             schedule_queue.log_usr = message
             session.commit()
