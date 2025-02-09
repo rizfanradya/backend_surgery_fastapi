@@ -71,6 +71,8 @@ services:
       context: ./backend_surgery_fastapi
       dockerfile: Dockerfile
     restart: always
+    volumes:
+      - backend_uploads:/app/uploads
     depends_on:
       backend:
         condition: service_started
@@ -102,6 +104,8 @@ services:
       context: ./backend_surgery_fastapi
       dockerfile: Dockerfile
     restart: always
+    volumes:
+      - backend_uploads:/app/uploads
     depends_on:
       backend:
         condition: service_started
