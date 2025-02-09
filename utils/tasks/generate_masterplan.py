@@ -62,8 +62,8 @@ def generate_masterplan_task(self, masterplan_id: int):
         #     )
 
         abs_path = os.path.abspath(__file__)
-        base_dir = os.path.dirname(os.path.dirname(abs_path))
-        upload_dir = os.path.join(base_dir, '..', 'uploads')
+        base_dir = os.path.dirname(abs_path)
+        upload_dir = os.path.abspath(os.path.join(base_dir, '..', 'uploads'))
         os.makedirs(upload_dir, exist_ok=True)
         file_path = os.path.join(upload_dir, masterplan.uploaded_file)
         if not os.path.exists(file_path):
