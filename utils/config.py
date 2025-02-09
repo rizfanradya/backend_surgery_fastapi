@@ -26,10 +26,7 @@ DB_NAME = os.environ.get('DB_NAME')
 
 LINK_FRONTEND = os.environ.get('LINK_FRONTEND')
 
-REDIS_HOST = os.environ.get('REDIS_HOST')
-REDIS_PORT = os.environ.get('REDIS_PORT')
-REDIS_DB = os.environ.get('REDIS_DB')
-REDIS_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}'
+REDIS_URL = os.environ.get('REDIS_URL')
 
 
 print(JWT_SECRET_KEY)
@@ -49,6 +46,4 @@ print(DB_NAME)
 
 print(LINK_FRONTEND)
 
-print(REDIS_HOST)
-print(REDIS_PORT)
-print(REDIS_DB)
+print(REDIS_URL)

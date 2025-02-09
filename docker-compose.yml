@@ -64,9 +64,7 @@ services:
       DB_PASSWORD: "vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ"
       DB_NAME: "hctm_surgery"
 
-      REDIS_HOST: "redis"
-      REDIS_PORT: 6379
-      REDIS_DB: 0
+      REDIS_URL: "redis://localhost:6379/0"
 
   celery_worker:
     build:
@@ -79,6 +77,8 @@ services:
       redis:
         condition: service_healthy
     command: celery -A utils.celery worker --loglevel=info --concurrency=4
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
 
   celery_beat:
     build:
@@ -91,6 +91,8 @@ services:
       redis:
         condition: service_healthy
     command: celery -A utils.celery beat --loglevel=info
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
 
   frontend:
     build:
