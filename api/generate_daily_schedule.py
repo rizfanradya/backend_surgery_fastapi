@@ -304,7 +304,6 @@ def generate_daily_schedule(
 @router.get('/run_id')
 def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
     try:
-        status_completed = retrieve_status('completed', session)
         subquery = (
             session.query(
                 ScheduleResults.run_id,
@@ -340,7 +339,6 @@ def distinct_run_ids(limit: int = 10, offset: int = 0, session: Session = Depend
                 for sq in (
                     session.query(ScheduleQueue)
                     .options(joinedload(ScheduleQueue.status))
-                    .filter(ScheduleQueue.status_id != status_completed.id)
                     .all()
                 )
             ]
