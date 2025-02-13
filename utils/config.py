@@ -29,21 +29,21 @@ LINK_FRONTEND = os.environ.get('LINK_FRONTEND')
 REDIS_URL = os.environ.get('REDIS_URL')
 
 
-print(JWT_SECRET_KEY)
-print(JWT_REFRESH_SECRET_KEY)
+# print(JWT_SECRET_KEY)
+# print(JWT_REFRESH_SECRET_KEY)
 
-print(IP_SERVER_HOSTNAME)
-print(SERVER_PORT)
+# print(IP_SERVER_HOSTNAME)
+# print(SERVER_PORT)
 
-print(EMAIL_USER)
-print(EMAIL_PASSWORD)
+# print(EMAIL_USER)
+# print(EMAIL_PASSWORD)
 
-print(DB_HOSTNAME)
-print(DB_PORT)
-print(DB_USER)
-print(DB_PASSWORD)
-print(DB_NAME)
+# print(DB_HOSTNAME)
+# print(DB_PORT)
+# print(DB_USER)
+# print(DB_PASSWORD)
+# print(DB_NAME)
 
-print(LINK_FRONTEND)
+# print(LINK_FRONTEND)
 
-print(REDIS_URL)
+# print(REDIS_URL)

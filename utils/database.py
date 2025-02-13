@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 from .config import (
     DB_HOSTNAME as DBH,
     DB_NAME as DBN,
@@ -31,3 +32,12 @@ def get_db():
         yield db
     finally:
         db.close()  # type: ignore
+
+
+@contextmanager
+def get_db_session():
+    db = next(get_db())
+    try:
+        yield db
+    finally:
+        db.close()
