@@ -25,6 +25,7 @@ import pytz
 from io import BytesIO
 from openpyxl import load_workbook
 from datetime import timedelta, datetime, time
+from pandas import DataFrame
 
 
 @celery.task(bind=True, name="utils.tasks.generate_daily_schedule")
@@ -330,6 +331,23 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                     f' - {message}',
                     generate_schedule_success(schedule_queue)
                 )
+
+            BASE_DIR = os.path.dirname(os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__))))
+            DOWNLOAD_DIR = os.path.join(
+                BASE_DIR, "downloads", "daily_schedule")
+            os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+            FILENAME = f"{schedule_queue.run_id}.xlsx"
+            FILE_PATH = os.path.join(DOWNLOAD_DIR, FILENAME)
+            schedule_result = session.query(ScheduleResults).where(
+                ScheduleResults.run_id == schedule_queue.run_id).all()
+            data = [{key: value for key, value in r.__dict__.items(
+            ) if key != "_sa_instance_state"} for r in schedule_result]
+            df = DataFrame(data)
+            df.to_excel(FILE_PATH, index=False, engine='openpyxl')
+
+            schedule_queue.downloaded_file = FILENAME
+            session.commit()
             return {"status": "success", "message": message}
         except Exception as e:
             schedule_queue.id

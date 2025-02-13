@@ -41,6 +41,7 @@ services:
     restart: always
     volumes:
       - backend_uploads:/app/uploads
+      - backend_downloads:/app/downloads
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +74,7 @@ services:
     restart: always
     volumes:
       - backend_uploads:/app/uploads
+      - backend_downloads:/app/downloads
     depends_on:
       backend:
         condition: service_started
@@ -106,6 +108,7 @@ services:
     restart: always
     volumes:
       - backend_uploads:/app/uploads
+      - backend_downloads:/app/downloads
     depends_on:
       backend:
         condition: service_started
@@ -145,4 +148,5 @@ services:
 volumes:
   db_data_pgsql:
   backend_uploads:
+  backend_downloads:
   redis_data:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, UploadFile, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 from utils.database import get_db
 from utils.auth import TokenAuthorization
@@ -7,8 +7,8 @@ from utils.transform_ot_type import transform_ot_types
 from utils.error_response import send_error_response
 from utils.parse_date import parse_date
 from utils.tasks.generate_masterplan import generate_masterplan_task
+from utils.tasks.purge_failed_queues_mssp import purge_failed_queues_mssp_task
 from utils.retrieve.status import retrieve_status
-from utils.remove_orphaned_files import check_and_remove_orphaned_files
 from typing import Literal, Optional
 from sqlalchemy import asc, desc, text, cast, String
 from io import BytesIO
@@ -46,7 +46,6 @@ from models.equipment_requirement_status import EquipmentRequirementStatus
 from models.equipment import Equipment
 from models.clashing_subspecialties import ClashingSubSpecialties
 from models.schedule_resource import ScheduleResource
-from models.surgery import Surgery
 
 router = APIRouter()
 wib_timezone = pytz.timezone("Asia/Jakarta")
@@ -649,6 +648,17 @@ def check_excell_format(file: UploadFile = File(...), session: Session = Depends
 
 @router.get('/template')
 def download_template(token: str = Depends(TokenAuthorization)):
+    FILENAME = "template_masterplan.xlsx"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    TEMPLATE_DIR = os.path.join(BASE_DIR, "data")
+    TEMPLATE_PATH = os.path.join(TEMPLATE_DIR, FILENAME)
+    os.makedirs(TEMPLATE_DIR, exist_ok=True)
+    if os.path.exists(TEMPLATE_PATH):
+        return FileResponse(
+            TEMPLATE_PATH,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=FILENAME
+        )
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "template"  # type: ignore
@@ -659,34 +669,15 @@ def download_template(token: str = Depends(TokenAuthorization)):
     ]
     for col_num, header in enumerate(headers, 1):
         sheet.cell(row=1, column=col_num, value=header)  # type: ignore
-    output = BytesIO()
-    workbook.save(output)
-    output.seek(0)
-    filename = datetime.now(wib_timezone).strftime(
-        f'masterplan_format_%Y-%B-%d_%H:%M:%S.xlsx')
-    return StreamingResponse(
-        output,
-        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    workbook.save(TEMPLATE_PATH)
+    return FileResponse(
+        TEMPLATE_PATH,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=FILENAME
     )
 
 
 @router.delete('/purge_failed_queues')
-def purge_failed_queues(session: Session = Depends(get_db), token: str = Depends(TokenAuthorization)):
-    try:
-        status_failed = retrieve_status('failed', session)
-        query_mssp = session.query(Masterplan.id).where(
-            Masterplan.status_id == status_failed.id)
-        session.query(OtAssignment).where(OtAssignment.mssp_id.in_(
-            query_mssp)).delete(synchronize_session=False)
-        session.query(Surgery).where(Surgery.mssp_id.in_(
-            query_mssp)).delete(synchronize_session=False)
-        deleted_rows = session.query(Masterplan).where(
-            Masterplan.status_id == status_failed.id).delete(synchronize_session=False)
-        session.commit()
-        check_and_remove_orphaned_files()
-        if deleted_rows == 0:
-            return {"status": "info", "message": "No failed queues found"}
-        return {"status": "success", "message": f"Deleted {deleted_rows} failed queues and related data"}
-    except Exception as error:
-        return send_error_response(str(error), "Failed to purge queues")
+def purge_failed_queues(token: str = Depends(TokenAuthorization)):
+    purge_failed_queues_mssp_task.apply_async()
+    return {"status": "success", "message": f"Deleted success failed queues and related data"}

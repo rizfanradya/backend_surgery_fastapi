@@ -17,6 +17,7 @@ class ScheduleQueue(Base):
     created_at = Column(
         DateTime, default=lambda: datetime.now(WIB), nullable=False)
     uploaded_file = Column(String(length=255))
+    downloaded_file = Column(String(length=255))
     start_date = Column(Date)
     end_date = Column(Date)
     log_usr = Column(Text)
