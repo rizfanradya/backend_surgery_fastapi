@@ -62,3 +62,19 @@ def TokenAuthorization(token: str = Depends(oauth2_scheme), session: Session = D
         send_error_response("Token has expired")
     except jwt.InvalidTokenError:
         send_error_response("Token is invalid")
+
+
+def TokenAuthorizationNotEmail(token: str = Depends(oauth2_scheme), session: Session = Depends(get_db)):
+    if JWT_SECRET_KEY is None:
+        send_error_response("Environment variable JWT SECRET KEY not set")
+    try:
+        decode_token = jwt.decode(
+            token, JWT_SECRET_KEY, algorithms=[ALGORITHM])  # type: ignore
+        user_info = session.query(User).get(decode_token.get('id'))
+        if user_info is None:
+            send_error_response("User not found")
+        return user_info
+    except jwt.ExpiredSignatureError:
+        send_error_response("Token has expired")
+    except jwt.InvalidTokenError:
+        send_error_response("Token is invalid")
