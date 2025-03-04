@@ -47,25 +47,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      JWT_SECRET_KEY: "dHJlZXJvY2tkcml2ZXNpbmdsZWxvbmdlcmF0ZWJpbGx5ZXRwaWxlc3Rvcnlvcmdhbmk"
-      JWT_REFRESH_SECRET_KEY: "c2VwYXJhdGVzdHJhaWdodHdoZXRoZXJvbmx5aGVyd2Vha2JlY29tZWNvbXBvc2Vkc3U"
-
-      EMAIL_USER: "rizfankusuma@gmail.com"
-      EMAIL_PASSWORD: "aany onuh zxqs xdqs"
-
-      IP_SERVER_HOSTNAME: "localhost"
-      SERVER_PORT: 8001
-
-      LINK_FRONTEND: "http://89.116.20.146"
-
-      DB_HOSTNAME: "postgres"
-      DB_PORT: 5432
-      DB_USER: "hctm_surgery"
-      DB_PASSWORD: "vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ"
-      DB_NAME: "hctm_surgery"
-
-      REDIS_URL: "redis://redis:6379/0"
 
   celery_worker:
     build:
@@ -81,25 +62,6 @@ services:
       redis:
         condition: service_healthy
     command: celery -A utils.celery worker --loglevel=info --concurrency=4
-    environment:
-      JWT_SECRET_KEY: "dHJlZXJvY2tkcml2ZXNpbmdsZWxvbmdlcmF0ZWJpbGx5ZXRwaWxlc3Rvcnlvcmdhbmk"
-      JWT_REFRESH_SECRET_KEY: "c2VwYXJhdGVzdHJhaWdodHdoZXRoZXJvbmx5aGVyd2Vha2JlY29tZWNvbXBvc2Vkc3U"
-
-      EMAIL_USER: "rizfankusuma@gmail.com"
-      EMAIL_PASSWORD: "aany onuh zxqs xdqs"
-
-      IP_SERVER_HOSTNAME: "localhost"
-      SERVER_PORT: 8001
-
-      LINK_FRONTEND: "http://89.116.20.146"
-
-      DB_HOSTNAME: "postgres"
-      DB_PORT: 5432
-      DB_USER: "hctm_surgery"
-      DB_PASSWORD: "vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ"
-      DB_NAME: "hctm_surgery"
-
-      REDIS_URL: "redis://redis:6379/0"
 
   celery_beat:
     build:
@@ -115,25 +77,6 @@ services:
       redis:
         condition: service_healthy
     command: celery -A utils.celery beat --loglevel=info
-    environment:
-      JWT_SECRET_KEY: "dHJlZXJvY2tkcml2ZXNpbmdsZWxvbmdlcmF0ZWJpbGx5ZXRwaWxlc3Rvcnlvcmdhbmk"
-      JWT_REFRESH_SECRET_KEY: "c2VwYXJhdGVzdHJhaWdodHdoZXRoZXJvbmx5aGVyd2Vha2JlY29tZWNvbXBvc2Vkc3U"
-
-      EMAIL_USER: "rizfankusuma@gmail.com"
-      EMAIL_PASSWORD: "aany onuh zxqs xdqs"
-
-      IP_SERVER_HOSTNAME: "localhost"
-      SERVER_PORT: 8001
-
-      LINK_FRONTEND: "http://89.116.20.146"
-
-      DB_HOSTNAME: "postgres"
-      DB_PORT: 5432
-      DB_USER: "hctm_surgery"
-      DB_PASSWORD: "vEf6sk98f2bcukaPD4nXCraSXstt2zvnWpeomg8LIH0t0t8LJZ"
-      DB_NAME: "hctm_surgery"
-
-      REDIS_URL: "redis://redis:6379/0"
 
   frontend:
     build:
