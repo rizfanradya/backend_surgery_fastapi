@@ -163,8 +163,10 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
             master_plan_weeks.sort()
             num_masterplan_weeks = len(master_plan_weeks)
 
-            master_plan_slots = {(assignment.ot_id, assignment.day_id, assignment.week_id)
-                                  : assignment.unit_id for assignment in ot_assignments}
+            master_plan_slots = {
+                (assignment.ot_id, assignment.day_id, assignment.week_id):
+                    assignment.unit_id for assignment in ot_assignments
+            }
             available_ots = {assignment.ot_id for assignment in ot_assignments}
 
             for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
@@ -232,8 +234,9 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                         Week.name == calculate_week_name(operation_date.date())).first()
                     if not current_week:
                         continue
-                    mapped_week_id = master_plan_weeks[(
-                        current_week.id - 1) % num_masterplan_weeks]
+                    daily_week_index = (operation_dates.index(
+                        operation_date)) % num_masterplan_weeks
+                    mapped_week_id = master_plan_weeks[daily_week_index]
 
                     matching_week = session.query(Week).where(
                         Week.name == calculate_week_name(operation_date.date())).first()
