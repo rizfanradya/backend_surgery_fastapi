@@ -230,13 +230,16 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                             )
                         return {"status": "error", "message": message}
 
-                    current_week = session.query(Week).where(
-                        Week.name == calculate_week_name(operation_date.date())).first()
-                    if not current_week:
+                    daily_week_index = operation_dates.index(
+                        operation_date) // 5
+                    mapped_week_id = master_plan_weeks[
+                        daily_week_index % num_masterplan_weeks]
+                    matching_slots = [
+                        slot for slot in master_plan_slots
+                        if slot[0] in available_ots and slot[1] == day_id and slot[2] == mapped_week_id
+                    ]
+                    if not matching_slots:
                         continue
-                    daily_week_index = (operation_dates.index(
-                        operation_date)) % num_masterplan_weeks
-                    mapped_week_id = master_plan_weeks[daily_week_index]
 
                     matching_week = session.query(Week).where(
                         Week.name == calculate_week_name(operation_date.date())).first()
@@ -261,8 +264,8 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                             )
                         return {"status": "error", "message": message}
 
-                    for ot_id in available_ots:
-                        if (ot_id, day_id, mapped_week_id) in master_plan_slots and master_plan_slots[(ot_id, day_id, mapped_week_id)] == unit_data.id:
+                    for ot_id, _, _ in matching_slots:
+                        if master_plan_slots[(ot_id, day_id, mapped_week_id)] == unit_data.id:
                             key = (ot_id, day_id, operation_date)
                             if key not in ot_time_tracking:
                                 ot_time_tracking[key] = datetime.combine(
@@ -286,18 +289,18 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                                 schedule_queue_id=schedule_queue.id,
                                 unit_id=unit_data.id,
                                 mrn=str(row[1]),
-                                age=row[2],  # type: ignore
-                                week_id=matching_week.id,  # type: ignore
+                                age=row[2],
+                                week_id=matching_week.id,
                                 mssp_week_id=mapped_week_id,
                                 day_id=day_id,
-                                month_id=matching_month.id,  # type: ignore
+                                month_id=matching_month.id,
                                 surgery_date=ot_start_datetime.date(),
                                 type_of_surgery=str(row[7]),
                                 sub_specialty_desc=str(row[8]),
                                 specialty_id=str(row[9]),
                                 procedure_name=procedure_name,
                                 surgery_duration=duration,
-                                phu_id=unit_data.id,  # type: ignore
+                                phu_id=unit_data.id,
                                 phu_start_time=(
                                     ot_start_datetime - timedelta(minutes=60)).time(),
                                 phu_end_time=ot_start_datetime.time(),
@@ -306,15 +309,15 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                                 ot_end_time=ot_end_datetime.time(),
                                 surgeon_name=str(row[13]),
                                 booked_by=str(row[12]),
-                                post_op_id=unit_data.id,  # type: ignore
+                                post_op_id=unit_data.id,
                                 post_op_start_time=ot_end_datetime.time(),
                                 post_op_end_time=add_duration(
                                     ot_end_datetime.strftime("%H:%M"), 30, indonesia_tz),
-                                pacu_id=unit_data.id,  # type: ignore
+                                pacu_id=unit_data.id,
                                 pacu_start_time=ot_end_datetime.time(),
                                 pacu_end_time=add_duration(
                                     ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
-                                icu_id=unit_data.id,  # type: ignore
+                                icu_id=unit_data.id,
                                 icu_start_time=add_duration(
                                     ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
                                 icu_end_time=add_duration(
