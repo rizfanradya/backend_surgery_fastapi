@@ -285,6 +285,7 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                                 mrn=str(row[1]),
                                 age=row[2],  # type: ignore
                                 week_id=matching_week.id,  # type: ignore
+                                mssp_week_id=mapped_week_id,
                                 day_id=day_id,
                                 month_id=matching_month.id,  # type: ignore
                                 surgery_date=ot_start_datetime.date(),

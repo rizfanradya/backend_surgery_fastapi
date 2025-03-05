@@ -10,6 +10,7 @@ class ScheduleResultsSchema(BaseModel):
     mrn: str
     age: int
     week_id: int
+    mssp_week_id: int
     day_id: int
     month_id: int
     surgery_date: date

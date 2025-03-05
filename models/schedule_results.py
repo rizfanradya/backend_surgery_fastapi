@@ -38,7 +38,15 @@ class ScheduleResults(Base):
     unit_id = Column(Integer, ForeignKey('unit.id'), nullable=False)
     unit = relationship('Unit', back_populates='schedule_results')
     week_id = Column(Integer, ForeignKey('week.id'), nullable=False)
-    week = relationship('Week', back_populates='schedule_results')
+    week = relationship(
+        'Week', back_populates='schedule_results',
+        foreign_keys=[week_id]
+    )
+    mssp_week_id = Column(Integer, ForeignKey('week.id'), nullable=False)
+    mssp_week = relationship(
+        'Week', back_populates='mssp_week_schedule_results',
+        foreign_keys=[mssp_week_id]
+    )
     day_id = Column(Integer, ForeignKey('day.id'), nullable=False)
     day = relationship('Day', back_populates='schedule_results')
     month_id = Column(Integer, ForeignKey('month.id'), nullable=False)

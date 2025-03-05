@@ -14,4 +14,11 @@ class Week(Base):
     status = relationship('Status', back_populates='week')
     day = relationship('Day', back_populates='week')
     ot_assignment = relationship('OtAssignment', back_populates='week')
-    schedule_results = relationship('ScheduleResults', back_populates='week')
+    schedule_results = relationship(
+        'ScheduleResults', back_populates='week',
+        foreign_keys="[ScheduleResults.week_id]"
+    )
+    mssp_week_schedule_results = relationship(
+        'ScheduleResults', back_populates='mssp_week',
+        foreign_keys="[ScheduleResults.mssp_week_id]"
+    )
