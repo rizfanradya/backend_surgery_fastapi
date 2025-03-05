@@ -11,7 +11,6 @@ from models.schedule_queue import ScheduleQueue
 from models.schedule_resource import ScheduleResource
 from models.procedure_name import ProcedureName
 from models.schedule_results import ScheduleResults
-from models.ot import Ot
 from models.ot_assignment import OtAssignment
 from models.unit import Unit
 from models.day import Day
@@ -138,9 +137,6 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                         )
                     return {"status": "error", "message": message}
 
-            available_ots = session.scalars(
-                session.query(Ot.id).order_by(Ot.id.asc())).all()
-
             start_date_dt = parse_date(schedule_queue.start_date)
             end_date_dt = parse_date(schedule_queue.end_date)
             operation_dates = []
@@ -153,8 +149,6 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
             ot_time_tracking = {}
             work_day_minutes = 8 * 60
             schedule_results = []
-            date_index = 0
-            ot_load_balance = {ot_id: 0 for ot_id in available_ots}
 
             ot_unit_map = defaultdict(set)
             ot_assignments = session.query(OtAssignment).where(
@@ -163,6 +157,15 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                 ot_unit_map[assignment.unit_id].add(assignment.ot_id)
             ot_unit_map = {unit: list(ots)
                            for unit, ots in ot_unit_map.items()}
+
+            master_plan_weeks = list(
+                set(assignment.week_id for assignment in ot_assignments))
+            master_plan_weeks.sort()
+            num_masterplan_weeks = len(master_plan_weeks)
+
+            master_plan_slots = {(assignment.ot_id, assignment.day_id, assignment.week_id)
+                                  : assignment.unit_id for assignment in ot_assignments}
+            available_ots = {assignment.ot_id for assignment in ot_assignments}
 
             for row_idx, row in enumerate([row for row in sheet.iter_rows(  # type: ignore
                     min_row=2, values_only=True)], start=2):
@@ -207,15 +210,7 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                     procedure_name = procedure_name.split("-", 1)[-1].strip()
                 procedure_name = f"PROCEDURE - {procedure_name}"
 
-                sorted_ots = sorted(
-                    ot_unit_map.get(unit_data.id, []),
-                    key=lambda ot: ot_load_balance.get(ot, 0)
-                )
-
-                for ot_ids in sorted_ots:
-                    operation_date = operation_dates[date_index % len(
-                        operation_dates)]
-
+                for operation_date in operation_dates:
                     day_id = session.query(Day.id).where(
                         Day.name == operation_date.strftime('%A')
                     ).scalar()
@@ -232,6 +227,13 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                                     schedule_queue, message)
                             )
                         return {"status": "error", "message": message}
+
+                    current_week = session.query(Week).where(
+                        Week.name == calculate_week_name(operation_date.date())).first()
+                    if not current_week:
+                        continue
+                    mapped_week_id = master_plan_weeks[(
+                        current_week.id - 1) % num_masterplan_weeks]
 
                     matching_week = session.query(Week).where(
                         Week.name == calculate_week_name(operation_date.date())).first()
@@ -256,67 +258,69 @@ def generate_schedule_task(self, schedule_queue_id: int, resource: str):
                             )
                         return {"status": "error", "message": message}
 
-                    key = (ot_ids, day_id, matching_week.id, operation_date)
-                    if key not in ot_time_tracking:
-                        ot_time_tracking[key] = datetime.combine(
-                            operation_date,
-                            time(8, 0)
-                        )
+                    for ot_id in available_ots:
+                        if (ot_id, day_id, mapped_week_id) in master_plan_slots and master_plan_slots[(ot_id, day_id, mapped_week_id)] == unit_data.id:
+                            key = (ot_id, day_id, operation_date)
+                            if key not in ot_time_tracking:
+                                ot_time_tracking[key] = datetime.combine(
+                                    operation_date,
+                                    time(8, 0)
+                                )
 
-                    ot_start_datetime = ot_time_tracking[key]
-                    ot_end_datetime = ot_start_datetime + timedelta(
-                        minutes=duration)
-                    if ot_end_datetime.time() > time(16, 0):
+                            ot_start_datetime = ot_time_tracking[key]
+                            ot_end_datetime = ot_start_datetime + timedelta(
+                                minutes=duration)
+                            if ot_end_datetime.time() > time(16, 0):
+                                continue
+                            remaining_minutes = work_day_minutes - (
+                                ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480)
+                            if duration > remaining_minutes:
+                                continue
+                            ot_time_tracking[key] = ot_end_datetime
+
+                            schedule_result = ScheduleResultsSchema(
+                                run_id=schedule_queue.run_id,
+                                schedule_queue_id=schedule_queue.id,
+                                unit_id=unit_data.id,
+                                mrn=str(row[1]),
+                                age=row[2],  # type: ignore
+                                week_id=matching_week.id,  # type: ignore
+                                day_id=day_id,
+                                month_id=matching_month.id,  # type: ignore
+                                surgery_date=ot_start_datetime.date(),
+                                type_of_surgery=str(row[7]),
+                                sub_specialty_desc=str(row[8]),
+                                specialty_id=str(row[9]),
+                                procedure_name=procedure_name,
+                                surgery_duration=duration,
+                                phu_id=unit_data.id,  # type: ignore
+                                phu_start_time=(
+                                    ot_start_datetime - timedelta(minutes=60)).time(),
+                                phu_end_time=ot_start_datetime.time(),
+                                ot_id=ot_id,
+                                ot_start_time=ot_start_datetime.time(),
+                                ot_end_time=ot_end_datetime.time(),
+                                surgeon_name=str(row[13]),
+                                booked_by=str(row[12]),
+                                post_op_id=unit_data.id,  # type: ignore
+                                post_op_start_time=ot_end_datetime.time(),
+                                post_op_end_time=add_duration(
+                                    ot_end_datetime.strftime("%H:%M"), 30, indonesia_tz),
+                                pacu_id=unit_data.id,  # type: ignore
+                                pacu_start_time=ot_end_datetime.time(),
+                                pacu_end_time=add_duration(
+                                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
+                                icu_id=unit_data.id,  # type: ignore
+                                icu_start_time=add_duration(
+                                    ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
+                                icu_end_time=add_duration(
+                                    ot_end_datetime.strftime("%H:%M"), 330, indonesia_tz)
+                            )
+                            schedule_results.append(
+                                ScheduleResults(**schedule_result.dict()))
+                            break
+                    else:
                         continue
-                    remaining_minutes = work_day_minutes - (
-                        ot_start_datetime.hour * 60 + ot_start_datetime.minute - 480)
-                    if duration > remaining_minutes:
-                        continue
-                    ot_time_tracking[key] = ot_end_datetime
-
-                    ot_load_balance[ot_ids] += 1
-
-                    schedule_result = ScheduleResultsSchema(
-                        run_id=schedule_queue.run_id,
-                        schedule_queue_id=schedule_queue.id,
-                        unit_id=unit_data.id,
-                        mrn=str(row[1]),
-                        age=row[2],  # type: ignore
-                        week_id=matching_week.id,  # type: ignore
-                        day_id=day_id,
-                        month_id=matching_month.id,  # type: ignore
-                        surgery_date=ot_start_datetime.date(),
-                        type_of_surgery=str(row[7]),
-                        sub_specialty_desc=str(row[8]),
-                        specialty_id=str(row[9]),
-                        procedure_name=procedure_name,
-                        surgery_duration=duration,
-                        phu_id=unit_data.id,  # type: ignore
-                        phu_start_time=(
-                            ot_start_datetime - timedelta(minutes=60)).time(),
-                        phu_end_time=ot_start_datetime.time(),
-                        ot_id=ot_ids,
-                        ot_start_time=ot_start_datetime.time(),
-                        ot_end_time=ot_end_datetime.time(),
-                        surgeon_name=str(row[13]),
-                        booked_by=str(row[12]),
-                        post_op_id=unit_data.id,  # type: ignore
-                        post_op_start_time=ot_end_datetime.time(),
-                        post_op_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 30, indonesia_tz),
-                        pacu_id=unit_data.id,  # type: ignore
-                        pacu_start_time=ot_end_datetime.time(),
-                        pacu_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
-                        icu_id=unit_data.id,  # type: ignore
-                        icu_start_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 90, indonesia_tz),
-                        icu_end_time=add_duration(
-                            ot_end_datetime.strftime("%H:%M"), 330, indonesia_tz)
-                    )
-                    schedule_results.append(
-                        ScheduleResults(**schedule_result.dict()))
-                    date_index += 1
                     break
 
             schedule_queue.id
