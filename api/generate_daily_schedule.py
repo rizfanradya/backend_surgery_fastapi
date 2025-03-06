@@ -195,15 +195,18 @@ def schedule_results_and_filter(
                 result.unit_name = unit_name
                 schedule_by_week[(result.week_id, result.month_id, year_info)].append(
                     result)
-            formatted_results = [
-                {
-                    "week": week_date_map.get((week, month), f"Week {week}"),
-                    "fmt_week": fmt_week_date_map.get((week, month), f"Week {week}"),
-                    "month": month_year_map.get((year_info, month), f"{month} {year_info}"),
-                    "data": data
-                }
-                for (week, month, year_info), data in schedule_by_week.items()
-            ]
+            formatted_results = sorted(
+                [
+                    {
+                        "week": week_date_map.get((week, month), f"Week {week}"),
+                        "fmt_week": fmt_week_date_map.get((week, month), f"Week {week}"),
+                        "month": month_year_map.get((year_info, month), f"{month} {year_info}"),
+                        "data": data
+                    }
+                    for (week, month, year_info), data in schedule_by_week.items()
+                ],
+                key=lambda x: (x['week'])
+            )
 
         return {
             "total": total_data,
